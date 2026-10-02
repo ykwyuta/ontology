@@ -1,15 +1,20 @@
-# 規範層（docs/proposal/04-schema-design.md 4.2、レビュー状態は 06-decisions.md 6.3）
+# 規範層（docs/proposal/04-schema-design.md 4.2、レビュー状態は 06-decisions.md 6.3、実装は 08-phase2-results.md）
+# 規範の正本は norms/*.yaml。legal-onto load-norms で検証してから、ここに書き込む。
 define
-  attribute norm-id, value string;                # 例: "N95-3"
+  attribute norm-id, value string;                # 例: "D95"
   attribute norm-label, value string;
   attribute effect-code, value string;            # 例: "price-claim", "cancellation-by-mistake"
   attribute effect-category, value string
-    @values("arising", "impeding", "extinguishing", "blocking");  # 発生・障害・消滅・阻止
-  attribute pleading-layer, value integer;        # 0 請求原因, 1 抗弁, 2 再抗弁, 3 再々抗弁 ...
-  attribute stance, value string;                 # "判例", "通説", "有力説:○○" など
+    @values("arising", "impeding", "extinguishing", "blocking", "auxiliary");
+    # 発生・障害・消滅・阻止。auxiliary は他の規範の要件として使う部品（錯誤取消権の発生など）
+  attribute pleading-layer, value integer;        # 0 請求原因, 1 抗弁, 2 再抗弁, 3 再々抗弁 ...（例外関係から計算）
+  attribute stance, value string;                 # "条文", "判例", "通説", "有力説:○○" など
+  attribute claim-type, value string;             # 請求原因の規範が対象とする訴訟物 例: "sale-price"
+  attribute time-anchor, value string;            # 適用される法の版を決める時点 例: "declaration"（意思表示の時）
   attribute fact-code, value string;              # 要件事実の識別子 例: "N95-3.gross-negligence"
+  attribute fact-label, value string;             # 要件事実の説明
   attribute connective, value string @values("and", "or");
-  attribute evaluative, value boolean;            # 規範的要件か（「重大な過失」など）
+  attribute evaluative, value boolean;            # 規範的要件か（「重大な過失」など）。評価は人が入力する
   attribute burden-side, value string @values("claimant", "respondent");
   attribute function-name, value string;          # コンパイラが生成した関数名
   attribute override-ground, value string
@@ -22,36 +27,46 @@ define
     @values("unreviewed", "source-checked", "proleg-matched", "user-confirmed", "disputed");
   attribute authority-ref, value string;          # 典拠 例: 書名・版・頁、判例の事件番号
   attribute review-note, value string;
+  attribute source-quote, value string;           # 根拠条文の文言の一部（取り込み時に条文層と照合する）
 
   entity norm,
     owns norm-id @key, owns norm-label, owns effect-code, owns effect-category,
     owns pleading-layer, owns stance, owns valid-from, owns valid-to, owns function-name,
-    owns review-status, owns authority-ref, owns review-note,
+    owns claim-type, owns time-anchor,
+    owns review-status, owns authority-ref @card(0..), owns review-note,
     plays norm-condition:norm, plays norm-source:norm,
     plays exception:base, plays exception:exception,
     plays overrides:superior, plays overrides:inferior,
+    plays condition-norm:norm,
     plays derivation:applied-norm;
 
   # 要件の木
   entity condition @abstract,
     plays norm-condition:root, plays condition-part:whole, plays condition-part:part;
   entity atomic-condition sub condition,
-    owns fact-code, owns evaluative, owns burden-side;
+    owns fact-code, owns fact-label, owns evaluative, owns burden-side;
   entity compound-condition sub condition,
     owns connective;
+  # 他の規範が成立することを要件とする（例: 錯誤取消の抗弁 = 錯誤取消権の発生 + 取消しの意思表示）
+  entity norm-reference-condition sub condition,
+    plays condition-norm:condition;
 
   relation norm-condition, relates norm, relates root;
   relation condition-part, relates whole, relates part;
+  relation condition-norm, relates condition, relates norm;
 
   # 根拠（条文または判例）
   entity precedent,
     owns case-number @key, owns court, owns decision-date, owns grand-bench,
     plays norm-source:source;
-  relation norm-source, relates norm, relates source;
+  relation norm-source, relates norm, relates source, owns source-quote;
 
   # 原則・例外と優先関係
   relation exception, relates base, relates exception;
   relation overrides, relates superior, relates inferior, owns override-ground;
+
+  # コンパイラが定義した関数（再コンパイル時に undefine するため）
+  entity compiled-function, owns function-name @key;
 
   fun subconditions($c: condition) -> { condition }:
   match

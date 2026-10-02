@@ -1,0 +1,184 @@
+# 売買（民法555条以下）と、売買代金・目的物引渡しの請求に対する一般的な抗弁
+# 典拠: 司法研修所編『紛争類型別の要件事実』（売買代金請求訴訟・売買契約に基づく目的物引渡請求訴訟）。頁は未照合。
+
+- id: G555-price
+  label: 売買代金支払請求
+  effect: price-claim
+  category: arising
+  claim-type: sale-price
+  stance: 条文
+  sources:
+    - path: a555/p1
+      quote: 相手方がこれに対してその代金を支払うことを約する
+  authority:
+    - 民法555条
+    - 司法研修所編『紛争類型別の要件事実』売買代金請求訴訟（請求原因は売買契約の締結のみ）
+  when:
+    fact: N555.contract-concluded
+    label: 請求する側と請求される側が、目的物を代金額を定めて売買する契約を締結したこと
+
+- id: G555-delivery
+  label: 売買契約に基づく目的物引渡請求
+  effect: delivery-claim
+  category: arising
+  claim-type: sale-delivery
+  stance: 条文
+  sources:
+    - path: a555/p1
+      quote: 当事者の一方がある財産権を相手方に移転することを約し
+  authority:
+    - 民法555条
+    - 司法研修所編『紛争類型別の要件事実』売買契約に基づく目的物引渡請求訴訟
+  when:
+    fact: N555.contract-concluded
+    label: 請求する側と請求される側が、目的物を代金額を定めて売買する契約を締結したこと
+
+- id: D473
+  label: 弁済
+  effect: extinguished-by-performance
+  category: extinguishing
+  exception-of: [G555-price, G555-delivery]
+  stance: 条文
+  sources:
+    - path: a473/p1
+      quote: 債務者が債権者に対して債務の弁済をしたときは、その債権は、消滅する
+  authority:
+    - 民法473条
+    - 司法研修所編『紛争類型別の要件事実』（弁済の抗弁: 給付と、給付が当該債務についてされたこと）
+  when:
+    all:
+      - fact: N473.performance
+        label: 請求される側（又は第三者）が、請求する側に対し、債務の本旨に従った給付をしたこと
+      - fact: N473.for-this-debt
+        label: その給付が、請求されている債務についてされたこと
+
+- id: D533
+  label: 同時履行の抗弁
+  effect: refuse-until-counter-performance
+  category: blocking
+  exception-of: [G555-price, G555-delivery]
+  stance: 条文
+  sources:
+    - path: a533/p1
+      quote: 相手方がその債務の履行（債務の履行に代わる損害賠償の債務の履行を含む。）を提供するまでは、自己の債務の履行を拒むことができる
+  authority:
+    - 民法533条
+    - 司法研修所編『紛争類型別の要件事実』（同時履行の抗弁は権利抗弁であり、権利主張を要する）
+  note: 成立すると請求は棄却されず、引換給付の判決となる（阻止）。
+  when:
+    fact: N533.invoked
+    label: 請求される側が、反対給付の履行（提供）があるまで自己の債務の履行を拒絶すると主張したこと
+
+- id: R533-tender
+  label: 反対給付の履行又は履行の提供
+  effect: counter-performance-tendered
+  category: impeding
+  exception-of: [D533]
+  stance: 条文
+  sources:
+    - path: a533/p1
+      quote: 提供するまでは
+  authority:
+    - 民法533条本文
+  note: 履行の提供による同時履行の抗弁の消滅には、提供の継続を要するかについて議論がある（未整理）。
+  when:
+    fact: N533.counter-performance-tendered
+    label: 請求する側が、自己の反対給付を履行し、又はその履行の提供をしたこと
+
+- id: R533-prior
+  label: 先履行の合意（相手方の債務が弁済期にないこと）
+  effect: prior-performance-agreed
+  category: impeding
+  exception-of: [D533]
+  stance: 条文
+  sources:
+    - path: a533/p1
+      quote: 相手方の債務が弁済期にないときは、この限りでない
+  authority:
+    - 民法533条ただし書
+    - 司法研修所編『紛争類型別の要件事実』（先履行の合意の再抗弁）
+  when:
+    fact: N533-proviso.prior-performance-agreed
+    label: 請求される側の債務を先に履行する旨の合意があること（請求する側の反対給付の弁済期が到来していないこと）
+
+- id: D557-buyer
+  label: 手付解除（買主による手付放棄）
+  effect: rescinded-by-deposit
+  category: extinguishing
+  exception-of: [G555-price]
+  valid-from: 2020-04-01
+  time-anchor: contract
+  stance: 条文
+  sources:
+    - path: a557/p1
+      quote: 買主はその手付を放棄し
+  authority:
+    - 民法557条1項
+    - 司法研修所編『紛争類型別の要件事実』（手付解除の抗弁。手付は反対の意思表示がない限り解約手付と推定される）
+  when:
+    all:
+      - fact: N557.deposit-agreement
+        label: 売買契約に付随して、買主が売主に手付を交付する旨の合意をしたこと
+      - fact: N557.deposit-delivered
+        label: 買主が売主に手付を交付したこと
+      - fact: N557.buyer-cancellation
+        label: 買主が、手付を放棄して売買契約を解除する旨の意思表示をしたこと
+
+- id: D557-seller
+  label: 手付解除（売主による倍額の現実の提供）
+  effect: rescinded-by-deposit
+  category: extinguishing
+  exception-of: [G555-delivery]
+  valid-from: 2020-04-01
+  time-anchor: contract
+  stance: 条文
+  sources:
+    - path: a557/p1
+      quote: 売主はその倍額を現実に提供して
+  authority:
+    - 民法557条1項
+  when:
+    all:
+      - fact: N557.deposit-agreement
+        label: 売買契約に付随して、買主が売主に手付を交付する旨の合意をしたこと
+      - fact: N557.deposit-delivered
+        label: 買主が売主に手付を交付したこと
+      - fact: N557.seller-double-tender
+        label: 売主が、手付の倍額を買主に現実に提供したこと
+      - fact: N557.seller-cancellation
+        label: 売主が、売買契約を解除する旨の意思表示をしたこと
+
+- id: R557-commenced
+  label: 相手方による履行の着手
+  effect: deposit-cancellation-barred
+  category: impeding
+  exception-of: [D557-buyer, D557-seller]
+  valid-from: 2020-04-01
+  time-anchor: contract
+  stance: 条文
+  sources:
+    - path: a557/p1
+      quote: その相手方が契約の履行に着手した後は、この限りでない
+  authority:
+    - 民法557条1項ただし書
+  note: 改正後は、解除する側の相手方（請求する側）が履行に着手したことが要件。「履行の着手」の意味は判例による評価を要する。
+  when:
+    fact: N557-proviso.counterparty-commenced-performance
+    label: 解除の意思表示より前に、解除する側の相手方（請求する側）が契約の履行に着手したこと
+    evaluative: true
+
+- id: R557-excluded
+  label: 解約手付としない旨の合意
+  effect: deposit-cancellation-excluded
+  category: impeding
+  exception-of: [D557-buyer, D557-seller]
+  stance: 判例
+  sources:
+    - path: a557/p1
+      quote: 契約の解除をすることができる
+  authority:
+    - 司法研修所編『紛争類型別の要件事実』（解約手付の推定を覆す事実）
+  note: 手付は反対の意思表示がない限り解約手付と推定するのが判例・通説。
+  when:
+    fact: N557.no-cancellation-agreement
+    label: 手付を解約手付としない旨の合意があること

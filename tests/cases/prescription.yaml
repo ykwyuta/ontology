@@ -1,0 +1,55 @@
+# 消滅時効（norms/prescription.yaml）
+case-id: t-prescription
+claims:
+  - id: presc-5
+    type: sale-price
+    claimant: X
+    respondent: Y
+    time-points: &tp {declaration: 2020-05-10, contract: 2020-05-10, claim-arose: 2020-05-10}
+    facts: &p5 {N555.contract-concluded: admitted, N166-1-1.knew-exercisable: admitted, N166-1-1.five-years-elapsed: proven,
+                N145.invoked: admitted}
+    expect: denied
+  - id: presc-5-not-invoked
+    type: sale-price
+    claimant: X
+    respondent: Y
+    time-points: *tp
+    facts: {N555.contract-concluded: admitted, N166-1-1.knew-exercisable: admitted, N166-1-1.five-years-elapsed: proven}
+    expect: granted
+  - id: presc-10
+    type: sale-delivery
+    claimant: Y
+    respondent: X
+    time-points: *tp
+    facts: {N555.contract-concluded: admitted, N166-1-2.exercisable: admitted, N166-1-2.ten-years-elapsed: proven,
+            N145.invoked: admitted}
+    expect: denied
+  - id: presc-5-judicial-claim
+    type: sale-price
+    claimant: X
+    respondent: Y
+    time-points: *tp
+    facts: {<<: *p5, N147.judicial-claim-before-completion: proven}
+    expect: granted
+  - id: presc-5-acknowledged
+    type: sale-price
+    claimant: X
+    respondent: Y
+    time-points: *tp
+    facts: {<<: *p5, N152.acknowledgment-before-completion: proven}
+    expect: granted
+  - id: presc-5-acknowledged-after
+    type: sale-price
+    claimant: X
+    respondent: Y
+    time-points: *tp
+    facts: {<<: *p5, N-H41.acknowledgment-after-completion: proven}
+    expect: granted
+  - id: presc-claim-arose-before-reform
+    # 2020-04-01 より前に生じた債権には改正後の166条の規範を適用しない（旧法の規範は未登録）
+    type: sale-price
+    claimant: X
+    respondent: Y
+    time-points: {declaration: 2019-06-01, contract: 2019-06-01, claim-arose: 2019-06-01}
+    facts: {<<: *p5}
+    expect: granted

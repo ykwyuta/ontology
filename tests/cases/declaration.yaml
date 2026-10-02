@@ -1,0 +1,157 @@
+# 意思表示と取消し（norms/declaration.yaml）
+case-id: t-declaration
+claims:
+  - id: decl-93
+    type: sale-price
+    claimant: X
+    respondent: Y
+    time-points: &tp {declaration: 2024-05-10, contract: 2024-05-10, claim-arose: 2024-05-10}
+    facts: {N555.contract-concluded: admitted, N93.knowingly-untrue: proven, N93-proviso.counterparty-knew-or-could: proven}
+    expect: denied
+  - id: decl-93-unclear
+    type: sale-price
+    claimant: X
+    respondent: Y
+    time-points: *tp
+    facts: {N555.contract-concluded: admitted, N93.knowingly-untrue: proven, N93-proviso.counterparty-knew-or-could: unclear}
+    expect: granted
+  - id: decl-94
+    type: sale-delivery
+    claimant: Y
+    respondent: X
+    time-points: *tp
+    facts: {N555.contract-concluded: admitted, N94.collusive-false-declaration: proven}
+    expect: denied
+  - id: decl-95-expression
+    type: sale-price
+    claimant: X
+    respondent: Y
+    time-points: *tp
+    facts: &m95 {N555.contract-concluded: admitted, N95-1-1.mistake-in-expression: proven, N95-1.material: proven,
+                 N123.cancellation-declared: admitted}
+    expect: denied
+  - id: decl-95-motive-not-indicated
+    type: sale-price
+    claimant: X
+    respondent: Y
+    time-points: *tp
+    facts: {N555.contract-concluded: admitted, N95-1-2.mistake-in-motive: proven, N95-2.motive-indicated: disproven,
+            N95-1.material: proven, N123.cancellation-declared: admitted}
+    expect: granted
+  - id: decl-95-not-cancelled
+    type: sale-price
+    claimant: X
+    respondent: Y
+    time-points: *tp
+    facts: {N555.contract-concluded: admitted, N95-1-1.mistake-in-expression: proven, N95-1.material: proven}
+    expect: granted
+  - id: decl-95-gross-negligence
+    type: sale-price
+    claimant: X
+    respondent: Y
+    time-points: *tp
+    facts: {<<: *m95, N95-3.gross-negligence: proven}
+    expect: granted
+  - id: decl-95-common-mistake
+    type: sale-price
+    claimant: X
+    respondent: Y
+    time-points: *tp
+    facts: {<<: *m95, N95-3.gross-negligence: proven, N95-3-2.common-mistake: proven}
+    expect: denied
+  - id: decl-95-before-reform
+    # 2020-04-01 より前の意思表示には改正後の95条の規範を適用しない（旧95条の規範は未登録）
+    type: sale-price
+    claimant: X
+    respondent: Y
+    time-points: {declaration: 2019-06-01, contract: 2019-06-01, claim-arose: 2019-06-01}
+    facts: {<<: *m95}
+    expect: granted
+  - id: decl-95-no-time-point
+    # 時点が未入力なら、適用期間のある規範は適用しない
+    type: sale-price
+    claimant: X
+    respondent: Y
+    facts: {<<: *m95}
+    expect: granted
+  - id: decl-fraud
+    type: sale-price
+    claimant: X
+    respondent: Y
+    time-points: *tp
+    facts: &fraud {N555.contract-concluded: admitted, N96-1.deception: proven, N96-1.fraud-mistake-and-causation: proven,
+                   N96-1.fraud-intent: proven, N123.cancellation-declared: admitted}
+    expect: denied
+  - id: decl-fraud-ratified
+    type: sale-price
+    claimant: X
+    respondent: Y
+    time-points: *tp
+    facts: {<<: *fraud, N122.ratification: proven, N124-1.after-cause-ceased-and-knowledge: proven}
+    expect: granted
+  - id: decl-fraud-ratified-too-early
+    type: sale-price
+    claimant: X
+    respondent: Y
+    time-points: *tp
+    facts: {<<: *fraud, N122.ratification: proven, N124-1.after-cause-ceased-and-knowledge: disproven}
+    expect: denied
+  - id: decl-fraud-statutory-ratification
+    type: sale-price
+    claimant: X
+    respondent: Y
+    time-points: *tp
+    facts: {<<: *fraud, N125.statutory-ratification-event: proven}
+    expect: granted
+  - id: decl-fraud-statutory-ratification-objection
+    type: sale-price
+    claimant: X
+    respondent: Y
+    time-points: *tp
+    facts: {<<: *fraud, N125.statutory-ratification-event: proven, N125-proviso.objection-reserved: proven}
+    expect: denied
+  - id: decl-fraud-5-years
+    type: sale-price
+    claimant: X
+    respondent: Y
+    time-points: *tp
+    facts: {<<: *fraud, N126.five-years-from-ratifiable: proven}
+    expect: granted
+  - id: decl-third-party-fraud
+    type: sale-price
+    claimant: X
+    respondent: Y
+    time-points: *tp
+    facts: &tpf {N555.contract-concluded: admitted, N96-2.third-party-deception: proven, N96-2.mistake-and-causation: proven,
+                 N96-2.third-party-intent: proven, N96-2.counterparty-knew-or-could: proven, N123.cancellation-declared: admitted}
+    expect: denied
+  - id: decl-third-party-fraud-innocent
+    type: sale-price
+    claimant: X
+    respondent: Y
+    time-points: *tp
+    facts: {<<: *tpf, N96-2.counterparty-knew-or-could: disproven}
+    expect: granted
+  - id: decl-duress
+    type: sale-delivery
+    claimant: Y
+    respondent: X
+    time-points: *tp
+    facts: &duress {N555.contract-concluded: admitted, N96-1.duress: proven, N96-1.duress-fear-and-causation: proven,
+                    N96-1.duress-intent: proven, N123.cancellation-declared: admitted}
+    expect: denied
+  - id: decl-duress-20-years
+    type: sale-delivery
+    claimant: Y
+    respondent: X
+    time-points: *tp
+    facts: {<<: *duress, N126.twenty-years-from-act: proven}
+    expect: granted
+  - id: decl-mistake-fails-fraud-holds
+    # 錯誤取消しが重過失で退けられても、詐欺取消しが成立すれば請求は認められない
+    type: sale-price
+    claimant: X
+    respondent: Y
+    time-points: *tp
+    facts: {<<: *fraud, N95-1-1.mistake-in-expression: proven, N95-1.material: proven, N95-3.gross-negligence: proven}
+    expect: denied

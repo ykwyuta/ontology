@@ -1,0 +1,107 @@
+# 消滅時効（民法144条以下）
+# 適用の時点は、債権が生じた時（その原因である法律行為の時を含む）。平成29年法律第44号附則10条1項・4項。
+# 典拠: 司法研修所編『紛争類型別の要件事実』（消滅時効の抗弁）。頁は未照合。
+
+- id: D166-5
+  label: 消滅時効（権利を行使することができることを知った時から5年）
+  effect: extinguished-by-prescription
+  category: extinguishing
+  exception-of: [G555-price, G555-delivery]
+  valid-from: 2020-04-01
+  time-anchor: claim-arose
+  stance: 条文
+  sources:
+    - path: a166/p1/i1
+      quote: 債権者が権利を行使することができることを知った時から五年間行使しないとき
+    - path: a145/p1
+      quote: 援用しなければ、裁判所がこれによって裁判をすることができない
+  authority:
+    - 民法166条1項1号・145条
+  note: 旧法の消滅時効（旧167条1項の10年、旧173条1号の2年など）の規範は未登録（フェーズ3）。
+  when:
+    all:
+      - fact: N166-1-1.knew-exercisable
+        label: 請求する側が、権利を行使することができることを知ったこと（その時点）
+      - fact: N166-1-1.five-years-elapsed
+        label: その時から5年が経過したこと
+      - fact: N145.invoked
+        label: 請求される側が、時効を援用する旨の意思表示をしたこと
+
+- id: D166-10
+  label: 消滅時効（権利を行使することができる時から10年）
+  effect: extinguished-by-prescription
+  category: extinguishing
+  exception-of: [G555-price, G555-delivery]
+  valid-from: 2020-04-01
+  time-anchor: claim-arose
+  stance: 条文
+  sources:
+    - path: a166/p1/i2
+      quote: 権利を行使することができる時から十年間行使しないとき
+    - path: a145/p1
+      quote: 援用しなければ、裁判所がこれによって裁判をすることができない
+  authority:
+    - 民法166条1項2号・145条
+  when:
+    all:
+      - fact: N166-1-2.exercisable
+        label: 権利を行使することができる時が到来したこと（その時点。売買代金なら弁済期）
+      - fact: N166-1-2.ten-years-elapsed
+        label: その時から10年が経過したこと
+      - fact: N145.invoked
+        label: 請求される側が、時効を援用する旨の意思表示をしたこと
+
+- id: R147
+  label: 裁判上の請求等による時効の完成猶予・更新
+  effect: prescription-suspended
+  category: impeding
+  exception-of: [D166-5, D166-10]
+  valid-from: 2020-04-01
+  time-anchor: claim-arose
+  stance: 条文
+  sources:
+    - path: a147/p1
+      quote: 時効は、完成しない
+    - path: a147/p1/i1
+      quote: 裁判上の請求
+  authority:
+    - 民法147条
+  note: 本件の訴えの提起も裁判上の請求にあたる。催告（150条）・協議の合意（151条）は未登録。
+  when:
+    fact: N147.judicial-claim-before-completion
+    label: 時効期間の経過前に、請求する側が裁判上の請求、支払督促、和解・調停の申立て又は倒産手続への参加をしたこと
+
+- id: R152
+  label: 承認による時効の更新
+  effect: prescription-renewed
+  category: impeding
+  exception-of: [D166-5, D166-10]
+  valid-from: 2020-04-01
+  time-anchor: claim-arose
+  stance: 条文
+  sources:
+    - path: a152/p1
+      quote: 時効は、権利の承認があったときは、その時から新たにその進行を始める
+  authority:
+    - 民法152条1項
+  note: 承認の後に改めて時効期間が経過した場合は扱っていない（その場合は、承認の時を起算点とした期間の経過を抗弁の事実として入力する）。
+  when:
+    fact: N152.acknowledgment-before-completion
+    label: 時効期間の経過前に、請求される側が債務を承認したこと（その後、時効期間が経過していないこと）
+
+- id: R-H41
+  label: 時効完成後の債務の承認（援用権の喪失）
+  effect: invocation-forfeited
+  category: impeding
+  exception-of: [D166-5, D166-10]
+  stance: 判例
+  precedents:
+    - 最大判昭和41年4月20日民集20巻4号702頁
+  authority:
+    - 最大判昭和41年4月20日民集20巻4号702頁（時効完成後に債務を承認した債務者は、時効完成の事実を知らなかったときでも、信義則上、その時効を援用することができない）
+  sources:
+    - path: a145/p1
+      quote: 援用しなければ
+  when:
+    fact: N-H41.acknowledgment-after-completion
+    label: 時効期間の経過後に、請求される側が債務を承認したこと

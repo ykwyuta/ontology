@@ -1,0 +1,22 @@
+# 提案書 4.5 の例題: 2024年5月、買主 Y が売主 X から絵画を 300万円で買った。
+# Y は有名画家の真作と信じ、その動機を X に表示していたが、実際は贋作だった。Y は錯誤を理由に取り消した。
+case-id: demo-001
+description: 絵画の売買代金請求に対する錯誤取消しの抗弁（提案書 4.5）
+claims:
+  - id: demo-001-price
+    type: sale-price
+    claimant: X
+    respondent: Y
+    time-points:
+      declaration: 2024-05-10
+      contract: 2024-05-10
+      claim-arose: 2024-05-10
+    facts:
+      N555.contract-concluded: admitted
+      N95-1-2.mistake-in-motive: proven
+      N95-2.motive-indicated: proven
+      N95-1.material: proven
+      N123.cancellation-declared: admitted
+      N95-3.gross-negligence: proven
+      N95-3-1.counterparty-knew-or-gross-negligence: unclear
+    expect: granted

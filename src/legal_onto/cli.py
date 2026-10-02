@@ -4,6 +4,9 @@
   legal-onto import-law LAW_ID [--since DATE] [--include-scheduled] [--replace]
                                                   e-Gov 法令API v2 から法令を版つきで取り込む
   legal-onto text PATH --at DATE                  ある時点の条文
+  legal-onto load-norms [--skip-source-check]      norms/*.yaml を検証して規範層に書き込み、関数にコンパイルする
+  legal-onto compile                              生成する TypeQL を表示する
+  legal-onto evaluate CASE.yaml...                事案を取り込んで評価し、結果を報告する
   legal-onto refs PATH [--at DATE] [--reverse] [--transitive] [--with-containers]
                                                   PATH とその項・号からの参照（--reverse で被参照）
 """
@@ -14,7 +17,9 @@ import sys
 import time
 from datetime import date
 
-from . import db, egov, lawxml, loader, versions
+from pathlib import Path
+
+from . import cases, compiler, db, egov, lawxml, loader, norms, versions
 
 
 def cmd_init_db(a) -> None:
@@ -98,6 +103,47 @@ def cmd_refs(a) -> None:
         print(f"{citing} -> {cited}  ({kind})")
 
 
+def cmd_load_norms(a) -> None:
+    ns = norms.load_dir()
+    with db.connect() as driver:
+        linked = not a.skip_source_check
+        if linked:
+            if not norms.provision_layer_loaded(driver, database=a.database):
+                raise SystemExit("条文層に民法がない。先に legal-onto import-law 129AC0000000089 を実行するか、"
+                                 "--skip-source-check を付けること")
+            problems = norms.check_sources(driver, ns, a.database)
+            if problems:
+                raise SystemExit("根拠条文の照合に失敗:\n  " + "\n  ".join(problems))
+        norms.store(driver, ns, a.database, link_sources=linked)
+        compiler.install(driver, ns, a.database)
+    by_layer: dict[int, int] = {}
+    for n in ns.values():
+        by_layer[n.layer] = by_layer.get(n.layer, 0) + 1
+    print(f"loaded {len(ns)} norms (by layer: {dict(sorted(by_layer.items()))}); "
+          f"sources {'checked and linked' if linked else 'not checked'}")
+
+
+def cmd_compile(a) -> None:
+    print(compiler.compile_norms(norms.load_dir())[0])
+
+
+def cmd_evaluate(a) -> int:
+    ns = norms.load_dir()
+    failed = 0
+    with db.connect() as driver:
+        for f in a.files:
+            case = cases.parse_case(Path(f))
+            cases.store_case(driver, case, a.database)
+            results = cases.evaluate(driver, case, ns, a.database)
+            print(cases.report_case(case, results, ns))
+            print()
+            for r in results:
+                if r.claim.expect and r.claim.expect != r.outcome:
+                    failed += 1
+                    print(f"!! 期待と異なる: {r.claim.id} expect={r.claim.expect} actual={r.outcome}")
+    return 1 if failed else 0
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="legal-onto")
     ap.add_argument("--database", default=db.DATABASE)
@@ -119,6 +165,17 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--at", default=date.today().isoformat())
     p.set_defaults(fn=cmd_text)
 
+    p = sub.add_parser("load-norms")
+    p.add_argument("--skip-source-check", action="store_true", help="根拠条文の照合と関係づけをしない")
+    p.set_defaults(fn=cmd_load_norms)
+
+    p = sub.add_parser("compile")
+    p.set_defaults(fn=cmd_compile)
+
+    p = sub.add_parser("evaluate")
+    p.add_argument("files", nargs="+")
+    p.set_defaults(fn=cmd_evaluate)
+
     p = sub.add_parser("refs")
     p.add_argument("path")
     p.add_argument("--at")
@@ -129,8 +186,7 @@ def main(argv: list[str] | None = None) -> int:
     p.set_defaults(fn=cmd_refs)
 
     a = ap.parse_args(argv)
-    a.fn(a)
-    return 0
+    return a.fn(a) or 0
 
 
 if __name__ == "__main__":

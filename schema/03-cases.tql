@@ -1,13 +1,14 @@
-# 事案層（docs/proposal/04-schema-design.md 4.3）
+# 事案層。推論は訴訟物（claim）ごとに行い、要件事実の認定は訴訟物に結びつける（08-phase2-results.md 8.2）
 define
   attribute case-id, value string;
+  attribute claim-id, value string;
   attribute party-name, value string;
-  attribute price, value integer;
-  attribute concluded-on, value date;
-  attribute declared-on, value date;
+  attribute anchor-code, value string;            # 規範の time-anchor と対応 例: "declaration"
+  attribute at, value date;
   attribute procedure-type, value string @values("civil", "criminal", "administrative");
   attribute proof-status, value string
     @values("admitted", "proven", "unclear", "disproven");   # 自白・証明済・真偽不明・否定
+  attribute derived-at, value datetime;
 
   entity case-file,
     owns case-id @key, owns procedure-type,
@@ -15,29 +16,27 @@ define
   relation case-membership, relates case, relates member;
 
   entity party, owns party-name,
-    plays sales-contract:seller, plays sales-contract:buyer,
-    plays contract-declaration:declarant,
-    plays case-membership:member, plays fact-finding:subject;
+    plays claim-party:claimant, plays claim-party:respondent,
+    plays case-membership:member;
 
-  entity declaration-of-intent, owns declared-on,
-    plays contract-declaration:declaration,
-    plays case-membership:member, plays fact-finding:subject;
-
-  relation sales-contract,
-    relates seller, relates buyer, owns price, owns concluded-on,
-    plays contract-declaration:contract,
-    plays case-membership:member, plays fact-finding:subject,
-    plays derivation:subject;
-
-  relation contract-declaration, relates contract, relates declaration, relates declarant;
+  # 訴訟物
+  entity claim,
+    owns claim-id @key, owns claim-type,
+    plays claim-party:claim,
+    plays fact-finding:subject, plays time-point:subject,
+    plays case-membership:member, plays derivation:subject;
+  relation claim-party, relates claim, relates claimant, relates respondent;
 
   # 要件事実の認定。規範層の fact-code と同じ属性値で対応づける
   relation fact-finding,
     relates subject, owns fact-code, owns proof-status,
     plays case-membership:member;
 
+  # 適用される法の版を決める時点（意思表示の時、契約締結の時など）
+  relation time-point,
+    relates subject, owns anchor-code, owns at;
+
   # 推論結果の実体化（導出記録）
-  attribute derived-at, value datetime;
   relation derivation,
     relates subject, relates applied-norm, owns effect-code, owns stance, owns derived-at;
 
@@ -46,3 +45,11 @@ define
     $f isa fact-finding, has proof-status $s;
     { $s == "admitted"; } or { $s == "proven"; };
   return { $f };
+
+  # 訴訟物 $c について fact-code の事実が証明されているか（$c 自身を返す）
+  fun fact_established($c: claim, $code: string) -> { claim }:
+  match
+    $f isa fact-finding, links (subject: $c), has fact-code $fc;
+    $fc == $code;
+    let $f in established();
+  return { $c };

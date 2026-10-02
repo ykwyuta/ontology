@@ -1,0 +1,294 @@
+# 意思表示（民法93条〜96条）と取消し（120条〜126条）
+# 事実は訴訟物ごとに認定する。「意思表示」は、請求の基礎である契約について請求される側がした意思表示を指す。
+# 典拠: 司法研修所編『紛争類型別の要件事実』（売買代金請求訴訟の抗弁）。頁は未照合。
+
+- id: D93
+  label: 心裡留保による無効
+  effect: void-by-mental-reservation
+  category: impeding
+  exception-of: [G555-price, G555-delivery]
+  valid-from: 2020-04-01
+  time-anchor: declaration
+  stance: 条文
+  sources:
+    - path: a93/p1
+      quote: 相手方がその意思表示が表意者の真意ではないことを知り、又は知ることができたときは、その意思表示は、無効とする
+  authority:
+    - 民法93条1項ただし書
+  when:
+    all:
+      - fact: N93.knowingly-untrue
+        label: 請求される側が、真意ではないことを知りながら契約の意思表示をしたこと
+      - fact: N93-proviso.counterparty-knew-or-could
+        label: 請求する側が、その意思表示が真意ではないことを知り、又は知ることができたこと
+        evaluative: true
+
+- id: D94
+  label: 通謀虚偽表示による無効
+  effect: void-by-sham
+  category: impeding
+  exception-of: [G555-price, G555-delivery]
+  stance: 条文
+  sources:
+    - path: a94/p1
+      quote: 相手方と通じてした虚偽の意思表示は、無効とする
+  authority:
+    - 民法94条1項
+  when:
+    fact: N94.collusive-false-declaration
+    label: 契約の意思表示が、請求する側と通じてした虚偽のものであること
+
+- id: NR95
+  label: 錯誤による取消権の発生
+  effect: cancellation-right-by-mistake
+  category: auxiliary
+  valid-from: 2020-04-01
+  time-anchor: declaration
+  stance: 条文
+  sources:
+    - path: a95/p1
+      quote: その錯誤が法律行為の目的及び取引上の社会通念に照らして重要なものであるときは、取り消すことができる
+    - path: a95/p2
+      quote: その事情が法律行為の基礎とされていることが表示されていたときに限り
+  authority:
+    - 民法95条1項・2項
+  note: 旧95条（要素の錯誤による無効）の規範は未登録（フェーズ3）。
+  when:
+    all:
+      - any:
+          - fact: N95-1-1.mistake-in-expression
+            label: 請求される側の意思表示が、意思表示に対応する意思を欠く錯誤に基づくこと（表示の錯誤）
+          - all:
+              - fact: N95-1-2.mistake-in-motive
+                label: 請求される側の意思表示が、法律行為の基礎とした事情についての認識が真実に反する錯誤に基づくこと（基礎事情の錯誤）
+              - fact: N95-2.motive-indicated
+                label: その事情が法律行為の基礎とされていることが表示されていたこと
+      - fact: N95-1.material
+        label: その錯誤が法律行為の目的及び取引上の社会通念に照らして重要なものであること
+        evaluative: true
+
+- id: D95
+  label: 錯誤による取消し
+  effect: cancellation-by-mistake
+  category: impeding
+  exception-of: [G555-price, G555-delivery]
+  stance: 条文
+  sources:
+    - path: a95/p1
+      quote: 取り消すことができる
+    - path: a121/p1
+      quote: 取り消された行為は、初めから無効であったものとみなす
+    - path: a123/p1
+      quote: 相手方に対する意思表示によってする
+  authority:
+    - 民法95条1項・121条・123条
+  when:
+    all:
+      - norm: NR95
+      - fact: N123.cancellation-declared
+        label: 請求される側が、請求する側に対し、契約の意思表示を取り消す旨の意思表示をしたこと
+
+- id: R95-3
+  label: 表意者の重大な過失
+  effect: mistake-cancellation-barred
+  category: impeding
+  exception-of: [D95]
+  valid-from: 2020-04-01
+  time-anchor: declaration
+  stance: 条文
+  sources:
+    - path: a95/p3
+      quote: 錯誤が表意者の重大な過失によるものであった場合には
+  authority:
+    - 民法95条3項柱書
+  when:
+    fact: N95-3.gross-negligence
+    label: 錯誤が、請求される側（表意者）の重大な過失によるものであったこと
+    evaluative: true
+
+- id: E95-3
+  label: 相手方の悪意・重過失又は共通錯誤
+  effect: bar-lifted
+  category: impeding
+  exception-of: [R95-3]
+  valid-from: 2020-04-01
+  time-anchor: declaration
+  stance: 条文
+  sources:
+    - path: a95/p3/i1
+      quote: 相手方が表意者に錯誤があることを知り、又は重大な過失によって知らなかったとき
+    - path: a95/p3/i2
+      quote: 相手方が表意者と同一の錯誤に陥っていたとき
+  authority:
+    - 民法95条3項1号・2号
+  when:
+    any:
+      - fact: N95-3-1.counterparty-knew-or-gross-negligence
+        label: 請求する側が、錯誤を知り、又は重大な過失によって知らなかったこと
+        evaluative: true
+      - fact: N95-3-2.common-mistake
+        label: 請求する側が、請求される側と同一の錯誤に陥っていたこと
+
+- id: D96-fraud
+  label: 詐欺による取消し（相手方の詐欺）
+  effect: cancellation-by-fraud
+  category: impeding
+  exception-of: [G555-price, G555-delivery]
+  stance: 条文
+  sources:
+    - path: a96/p1
+      quote: 詐欺又は強迫による意思表示は、取り消すことができる
+    - path: a123/p1
+      quote: 相手方に対する意思表示によってする
+  authority:
+    - 民法96条1項・121条・123条
+    - 司法研修所編『紛争類型別の要件事実』（詐欺取消しの抗弁: 欺罔行為、錯誤とそれに基づく意思表示、故意、取消しの意思表示）
+  when:
+    all:
+      - fact: N96-1.deception
+        label: 請求する側が、請求される側に対し、欺罔行為をしたこと
+      - fact: N96-1.fraud-mistake-and-causation
+        label: 請求される側が、欺罔行為によって錯誤に陥り、それによって契約の意思表示をしたこと
+      - fact: N96-1.fraud-intent
+        label: 請求する側が、請求される側を欺罔して錯誤に陥らせ、それによって意思表示をさせようとする故意を有していたこと
+      - fact: N123.cancellation-declared
+        label: 請求される側が、請求する側に対し、契約の意思表示を取り消す旨の意思表示をしたこと
+
+- id: D96-2
+  label: 詐欺による取消し（第三者の詐欺）
+  effect: cancellation-by-third-party-fraud
+  category: impeding
+  exception-of: [G555-price, G555-delivery]
+  valid-from: 2020-04-01
+  time-anchor: declaration
+  stance: 条文
+  sources:
+    - path: a96/p2
+      quote: 相手方がその事実を知り、又は知ることができたときに限り、その意思表示を取り消すことができる
+    - path: a123/p1
+      quote: 相手方に対する意思表示によってする
+  authority:
+    - 民法96条2項・121条・123条
+  note: 旧96条2項は「相手方がその事実を知っていたときに限り」。旧法の規範は未登録（フェーズ3）。
+  when:
+    all:
+      - fact: N96-2.third-party-deception
+        label: 第三者が、請求される側に対し、欺罔行為をしたこと
+      - fact: N96-2.mistake-and-causation
+        label: 請求される側が、欺罔行為によって錯誤に陥り、それによって契約の意思表示をしたこと
+      - fact: N96-2.third-party-intent
+        label: 第三者が、請求される側を欺罔して錯誤に陥らせ、それによって意思表示をさせようとする故意を有していたこと
+      - fact: N96-2.counterparty-knew-or-could
+        label: 請求する側が、第三者の詐欺の事実を知り、又は知ることができたこと
+        evaluative: true
+      - fact: N123.cancellation-declared
+        label: 請求される側が、請求する側に対し、契約の意思表示を取り消す旨の意思表示をしたこと
+
+- id: D96-duress
+  label: 強迫による取消し
+  effect: cancellation-by-duress
+  category: impeding
+  exception-of: [G555-price, G555-delivery]
+  stance: 条文
+  sources:
+    - path: a96/p1
+      quote: 詐欺又は強迫による意思表示は、取り消すことができる
+    - path: a123/p1
+      quote: 相手方に対する意思表示によってする
+  authority:
+    - 民法96条1項・121条・123条
+  note: 強迫は、第三者によるものでも相手方の主観を問わず取り消すことができる（96条2項は詐欺に限る）。
+  when:
+    all:
+      - fact: N96-1.duress
+        label: 請求する側又は第三者が、請求される側に対し、強迫行為をしたこと
+      - fact: N96-1.duress-fear-and-causation
+        label: 請求される側が、強迫によって畏怖し、それによって契約の意思表示をしたこと
+      - fact: N96-1.duress-intent
+        label: 強迫した者が、畏怖させ、それによって意思表示をさせようとする故意を有していたこと
+      - fact: N123.cancellation-declared
+        label: 請求される側が、請求する側に対し、契約の意思表示を取り消す旨の意思表示をしたこと
+
+# --- 取消しの抗弁に対する再抗弁（錯誤・詐欺・強迫に共通） ---
+
+- id: R122
+  label: 追認
+  effect: ratified
+  category: impeding
+  exception-of: [D95, D96-fraud, D96-2, D96-duress]
+  stance: 条文
+  sources:
+    - path: a122/p1
+      quote: 追認したときは、以後、取り消すことができない
+    - path: a124/p1
+      quote: 取消しの原因となっていた状況が消滅し、かつ、取消権を有することを知った後にしなければ、その効力を生じない
+  authority:
+    - 民法122条・124条1項
+  when:
+    all:
+      - fact: N122.ratification
+        label: 請求される側が、取消しの意思表示より前に、契約を追認する旨の意思表示をしたこと
+      - fact: N124-1.after-cause-ceased-and-knowledge
+        label: 追認が、取消しの原因となっていた状況が消滅し、かつ、取消権を有することを知った後にされたこと
+
+- id: R125
+  label: 法定追認
+  effect: deemed-ratified
+  category: impeding
+  exception-of: [D95, D96-fraud, D96-2, D96-duress]
+  stance: 条文
+  sources:
+    - path: a125/p1
+      quote: 追認をすることができる時以後に、取り消すことができる行為について次に掲げる事実があったときは、追認をしたものとみなす
+  authority:
+    - 民法125条
+  when:
+    fact: N125.statutory-ratification-event
+    label: 追認をすることができる時以後、取消しの意思表示より前に、全部又は一部の履行、履行の請求、更改、担保の供与、取得した権利の譲渡又は強制執行があったこと
+
+- id: E125
+  label: 異議の留保
+  effect: statutory-ratification-excluded
+  category: impeding
+  exception-of: [R125]
+  stance: 条文
+  sources:
+    - path: a125/p1
+      quote: 異議をとどめたときは、この限りでない
+  authority:
+    - 民法125条ただし書
+  when:
+    fact: N125-proviso.objection-reserved
+    label: その際に、請求される側が異議をとどめたこと
+
+- id: R126-5
+  label: 取消権の期間の経過（追認可能時から5年）
+  effect: cancellation-right-lapsed
+  category: impeding
+  exception-of: [D95, D96-fraud, D96-2, D96-duress]
+  stance: 通説
+  sources:
+    - path: a126/p1
+      quote: 取消権は、追認をすることができる時から五年間行使しないときは、時効によって消滅する
+  authority:
+    - 民法126条前段
+  note: 条文は「時効によって」とするが、援用の要否などについて見解が分かれる。ここでは期間の経過のみを要件とした（要確認）。
+  when:
+    fact: N126.five-years-from-ratifiable
+    label: 取消しの意思表示より前に、追認をすることができる時から5年が経過したこと
+
+- id: R126-20
+  label: 取消権の期間の経過（行為時から20年）
+  effect: cancellation-right-lapsed
+  category: impeding
+  exception-of: [D95, D96-fraud, D96-2, D96-duress]
+  stance: 通説
+  sources:
+    - path: a126/p1
+      quote: 行為の時から二十年を経過したときも、同様とする
+  authority:
+    - 民法126条後段
+  note: R126-5 と同じく、援用の要否は要確認。
+  when:
+    fact: N126.twenty-years-from-act
+    label: 取消しの意思表示より前に、契約の意思表示の時から20年が経過したこと

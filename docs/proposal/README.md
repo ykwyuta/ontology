@@ -13,6 +13,7 @@
 | 5 | [05-roadmap.md](05-roadmap.md) | 段階的な進め方・検証方法・リスク |
 | 6 | [06-decisions.md](06-decisions.md) | 決定事項（用途・分野・実行環境・レビュー体制）と設計への反映、実機検証の結果 |
 | 7 | [07-phase1-results.md](07-phase1-results.md) | フェーズ1の結果: 民法の版つき取り込み、参照の抽出、TypeDB 3.13 で分かったこと |
+| 8 | [08-phase2-results.md](08-phase2-results.md) | フェーズ2の結果: 規範（29件）、コンパイラ、事案の評価と報告 |
 
 ## 要旨
 

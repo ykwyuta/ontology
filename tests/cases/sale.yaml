@@ -1,0 +1,113 @@
+# 売買の請求原因と、弁済・同時履行・手付解除（norms/sale.yaml）
+case-id: t-sale
+claims:
+  - id: sale-ground
+    type: sale-price
+    claimant: X
+    respondent: Y
+    time-points: &tp {declaration: 2024-05-10, contract: 2024-05-10, claim-arose: 2024-05-10}
+    facts: {N555.contract-concluded: admitted}
+    expect: granted
+  - id: sale-ground-unclear
+    type: sale-price
+    claimant: X
+    respondent: Y
+    time-points: *tp
+    facts: {N555.contract-concluded: unclear}
+    expect: denied
+  - id: sale-delivery-ground
+    type: sale-delivery
+    claimant: Y
+    respondent: X
+    time-points: *tp
+    facts: {N555.contract-concluded: admitted}
+    expect: granted
+  - id: sale-payment
+    type: sale-price
+    claimant: X
+    respondent: Y
+    time-points: *tp
+    facts: {N555.contract-concluded: admitted, N473.performance: proven, N473.for-this-debt: proven}
+    expect: denied
+  - id: sale-payment-unclear
+    type: sale-price
+    claimant: X
+    respondent: Y
+    time-points: *tp
+    facts: {N555.contract-concluded: admitted, N473.performance: proven, N473.for-this-debt: unclear}
+    expect: granted
+  - id: sale-533
+    type: sale-price
+    claimant: X
+    respondent: Y
+    time-points: *tp
+    facts: {N555.contract-concluded: admitted, N533.invoked: admitted}
+    expect: granted-in-exchange
+  - id: sale-533-tender
+    type: sale-price
+    claimant: X
+    respondent: Y
+    time-points: *tp
+    facts: {N555.contract-concluded: admitted, N533.invoked: admitted, N533.counter-performance-tendered: proven}
+    expect: granted
+  - id: sale-533-prior
+    type: sale-price
+    claimant: X
+    respondent: Y
+    time-points: *tp
+    facts: {N555.contract-concluded: admitted, N533.invoked: admitted, N533-proviso.prior-performance-agreed: proven}
+    expect: granted
+  - id: sale-533-and-payment
+    # 消滅の抗弁（弁済）が成立すれば、阻止の抗弁があっても請求は認められない
+    type: sale-price
+    claimant: X
+    respondent: Y
+    time-points: *tp
+    facts: {N555.contract-concluded: admitted, N533.invoked: admitted, N473.performance: proven, N473.for-this-debt: proven}
+    expect: denied
+  - id: sale-557-buyer
+    type: sale-price
+    claimant: X
+    respondent: Y
+    time-points: *tp
+    facts: &dep {N555.contract-concluded: admitted, N557.deposit-agreement: admitted, N557.deposit-delivered: admitted,
+                 N557.buyer-cancellation: admitted}
+    expect: denied
+  - id: sale-557-buyer-commenced
+    type: sale-price
+    claimant: X
+    respondent: Y
+    time-points: *tp
+    facts: {<<: *dep, N557-proviso.counterparty-commenced-performance: proven}
+    expect: granted
+  - id: sale-557-buyer-excluded
+    type: sale-price
+    claimant: X
+    respondent: Y
+    time-points: *tp
+    facts: {<<: *dep, N557.no-cancellation-agreement: proven}
+    expect: granted
+  - id: sale-557-buyer-on-delivery-claim
+    # 買主の手付放棄による解除は、買主が請求する引渡請求の抗弁にはならない
+    type: sale-delivery
+    claimant: Y
+    respondent: X
+    time-points: *tp
+    facts: {<<: *dep}
+    expect: granted
+  - id: sale-557-seller
+    type: sale-delivery
+    claimant: Y
+    respondent: X
+    time-points: *tp
+    facts: {N555.contract-concluded: admitted, N557.deposit-agreement: admitted, N557.deposit-delivered: admitted,
+            N557.seller-double-tender: proven, N557.seller-cancellation: admitted}
+    expect: denied
+  - id: sale-557-before-reform
+    # 2020-04-01 より前の契約には改正後の557条の規範を適用しない（旧法の規範は未登録）
+    type: sale-price
+    claimant: X
+    respondent: Y
+    time-points: {declaration: 2019-06-01, contract: 2019-06-01, claim-arose: 2019-06-01}
+    facts: {<<: *dep}
+    expect: granted
