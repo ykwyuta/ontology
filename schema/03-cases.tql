@@ -1,0 +1,48 @@
+# 事案層（docs/proposal/04-schema-design.md 4.3）
+define
+  attribute case-id, value string;
+  attribute party-name, value string;
+  attribute price, value integer;
+  attribute concluded-on, value date;
+  attribute declared-on, value date;
+  attribute procedure-type, value string @values("civil", "criminal", "administrative");
+  attribute proof-status, value string
+    @values("admitted", "proven", "unclear", "disproven");   # 自白・証明済・真偽不明・否定
+
+  entity case-file,
+    owns case-id @key, owns procedure-type,
+    plays case-membership:case;
+  relation case-membership, relates case, relates member;
+
+  entity party, owns party-name,
+    plays sales-contract:seller, plays sales-contract:buyer,
+    plays contract-declaration:declarant,
+    plays case-membership:member, plays fact-finding:subject;
+
+  entity declaration-of-intent, owns declared-on,
+    plays contract-declaration:declaration,
+    plays case-membership:member, plays fact-finding:subject;
+
+  relation sales-contract,
+    relates seller, relates buyer, owns price, owns concluded-on,
+    plays contract-declaration:contract,
+    plays case-membership:member, plays fact-finding:subject,
+    plays derivation:subject;
+
+  relation contract-declaration, relates contract, relates declaration, relates declarant;
+
+  # 要件事実の認定。規範層の fact-code と同じ属性値で対応づける
+  relation fact-finding,
+    relates subject, owns fact-code, owns proof-status,
+    plays case-membership:member;
+
+  # 推論結果の実体化（導出記録）
+  attribute derived-at, value datetime;
+  relation derivation,
+    relates subject, relates applied-norm, owns effect-code, owns stance, owns derived-at;
+
+  fun established() -> { fact-finding }:
+  match
+    $f isa fact-finding, has proof-status $s;
+    { $s == "admitted"; } or { $s == "proven"; };
+  return { $f };

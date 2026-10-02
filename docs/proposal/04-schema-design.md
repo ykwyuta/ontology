@@ -2,7 +2,7 @@
 
 [03](03-modeling-approaches.md) で推奨したハイブリッド構成を、TypeQL（TypeDB 3.x）のスキーマと関数で具体化します。例題には、**売買代金請求に対する錯誤取消の抗弁（民法555条・95条）**を使います。
 
-> 注: TypeQL は TypeDB 3.x のドキュメントに基づいて記述しています。実際のサーバでの構文検証は、フェーズ1で行います（[05](05-roadmap.md)）。
+> 注: この節の TypeQL は TypeDB CE 3.13.6 で構文・型の検査を通り、4.5 の例題で期待どおりの結果が出ることを確認しました（[06](06-decisions.md#実機検証の結果フェーズ1の一部を前倒し)、[scripts/verify_proposal_typeql.py](../../scripts/verify_proposal_typeql.py)）。
 
 ## 4.1 条文層
 
@@ -51,7 +51,7 @@ define
   relation cross-reference, relates citing, relates cited, owns reference-kind;
 ```
 
-準用の連鎖のような推移的な参照は、再帰関数でたどれます。
+準用の連鎖のような推移的な参照は、再帰関数でたどれます。参照する側からたどる関数と、参照される側からたどる関数（影響分析用）の両方を用意します。参照は条だけでなく項・号や編章節（「この節の規定は…準用する」）にも張られるので、包含関係を上下にたどる関数も使います。
 
 ```typeql
 define
@@ -60,7 +60,27 @@ define
     { cross-reference (citing: $p, cited: $q); } or
     { cross-reference (citing: $p, cited: $r); let $q in referenced_transitively($r); };
   return { $q };
+
+  fun citing_transitively($p: provision) -> { provision }:
+  match
+    { cross-reference (citing: $q, cited: $p); } or
+    { cross-reference (citing: $r, cited: $p); let $q in citing_transitively($r); };
+  return { $q };
+
+  fun parts_transitively($p: provision) -> { provision }:
+  match
+    { containment (container: $p, part: $q); } or
+    { containment (container: $p, part: $r); let $q in parts_transitively($r); };
+  return { $q };
+
+  fun containers_transitively($p: provision) -> { provision }:
+  match
+    { containment (container: $q, part: $p); $q isa provision; } or
+    { containment (container: $r, part: $p); $r isa provision; let $q in containers_transitively($r); };
+  return { $q };
 ```
+
+実装では、文言の版と参照に有効期間（`valid-from` / `valid-to`）を持たせ、時点を指定してたどる関数（`text_at`、`referenced_at`、`citing_at`）も定義しています（[schema/01-provisions.tql](../../schema/01-provisions.tql)、[07](07-phase1-results.md)）。
 
 ## 4.2 規範層
 
@@ -363,11 +383,16 @@ fetch { "norm": $nid, "source": $path };
 
 ### Q4. 影響分析: 95条が改正されたら、どの事案の結論が変わりうるか
 
+95条を**参照している側**の規定をたどります（当初の案では `referenced_transitively` を使っており、95条が参照している側をたどる逆向きの誤りでした。フェーズ1の実装で修正）。
+
 ```typeql
 match
   $p isa article, has provision-path "129AC0000000089/a95";
-  { norm-source (norm: $n, source: $p); } or
-  { let $q in referenced_transitively($p); norm-source (norm: $n, source: $q); };
+  # 95条とその項・号、およびそれを含む節・章（「この節の規定は…」で参照されうる）
+  { $t is $p; } or { let $t in parts_transitively($p); } or { let $t in containers_transitively($p); };
+  # それらを根拠とする規範と、それらを（準用などで推移的に）参照する規定を根拠とする規範
+  { norm-source (norm: $n, source: $t); } or
+  { let $q in citing_transitively($t); norm-source (norm: $n, source: $q); };
   $dv isa derivation, links (subject: $c, applied-norm: $n);
   case-membership (case: $case, member: $c);
   $case has case-id $cid;

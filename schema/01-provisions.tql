@@ -1,0 +1,116 @@
+# 条文層（docs/proposal/04-schema-design.md 4.1）
+define
+  # --- 属性 ---
+  attribute law-id, value string;                 # e-Gov 法令ID 例: "129AC0000000089"（民法）
+  attribute law-title, value string;
+  attribute law-num, value string;                # 法令番号 例: "明治二十九年法律第八十九号"
+  attribute law-type, value string
+    @values("constitution", "treaty", "act", "cabinet-order",
+            "ministerial-ordinance", "rule", "local-ordinance");
+  attribute law-revision-id, value string;        # e-Gov の改正履歴ID 例: "129AC0000000089_20200401_501AC0000000034"
+  attribute provision-path, value string;         # 例: "129AC0000000089/a95/p3/i1"（95条3項1号）
+  attribute provision-num, value string;          # 枝番号のため文字列: "95", "3_2"
+  attribute caption, value string;                # 見出し 例: "（錯誤）"、編章節の題名
+  attribute grouping-kind, value string
+    @values("part", "chapter", "section", "subsection", "division", "suppl-provision");
+  attribute sentence-function, value string @values("main", "proviso", "former", "latter");
+  attribute sentence-num, value integer;
+  attribute body-text, value string;
+  attribute valid-from, value date;               # この日から有効
+  attribute valid-to, value date;                 # この日から無効（この日を含まない）。なければ現在も有効
+  attribute valid-from-exact, value boolean;      # false: 取り込んだ最古の版で、valid-from は実際の施行日ではなく取込範囲の下限
+  attribute reference-kind, value string
+    @values("refer", "apply-mutatis-mutandis", "read-as", "exclude", "notwithstanding");
+  attribute reference-text, value string;         # 参照を抽出した元の文字列 例: "新法第九十五条"
+
+  # --- 法令と規定単位 ---
+  entity law,
+    owns law-id @key, owns law-title, owns law-num, owns law-type, owns law-revision-id,
+    plays containment:container;
+
+  entity provision @abstract,
+    owns provision-path @key, owns provision-num, owns caption,
+    plays containment:container, plays containment:part,
+    plays provision-version:provision,
+    plays cross-reference:citing, plays cross-reference:cited,
+    plays norm-source:source;
+  entity grouping sub provision,                  # 編・章・節・款・目・附則
+    owns grouping-kind;
+  entity article sub provision;                   # 条
+  entity paragraph sub provision;                 # 項
+  entity item sub provision;                      # 号・号の細分
+
+  # 時点ごとの文言（溶け込み後の版）。1 文ごとに 1 つ
+  entity text-version,
+    owns body-text, owns sentence-function, owns sentence-num,
+    owns valid-from, owns valid-to, owns valid-from-exact, owns law-revision-id,
+    plays provision-version:version;
+
+  relation containment, relates container, relates part;
+  relation provision-version, relates provision, relates version;
+  # 参照も文言から抽出するので時点を持つ
+  relation cross-reference, relates citing, relates cited,
+    owns reference-kind, owns reference-text, owns valid-from, owns valid-to, owns valid-from-exact;
+
+  # --- 関数 ---
+  # $t の時点の文言
+  fun text_at($p: provision, $t: date) -> { text-version }:
+  match
+    provision-version (provision: $p, version: $v);
+    $v has valid-from $f; $f <= $t;
+    not { $v has valid-to $e; $e <= $t; };
+  return { $v };
+
+  # $p が（準用などを通じて）推移的に参照している規定。時点を問わない
+  fun referenced_transitively($p: provision) -> { provision }:
+  match
+    { cross-reference (citing: $p, cited: $q); } or
+    { cross-reference (citing: $p, cited: $r); let $q in referenced_transitively($r); };
+  return { $q };
+
+  # $p を推移的に参照している規定（影響分析用）。時点を問わない
+  fun citing_transitively($p: provision) -> { provision }:
+  match
+    { cross-reference (citing: $q, cited: $p); } or
+    { cross-reference (citing: $r, cited: $p); let $q in citing_transitively($r); };
+  return { $q };
+
+  # $t の時点で有効な参照（$x 自身を返す。or の分岐の中で否定を使えないため関数に分ける）
+  fun reference_active($x: cross-reference, $t: date) -> { cross-reference }:
+  match
+    $x has valid-from $f; $f <= $t;
+    not { $x has valid-to $e; $e <= $t; };
+  return { $x };
+
+  # $t の時点で有効な参照だけをたどる
+  fun referenced_at($p: provision, $t: date) -> { provision }:
+  match
+    { $x isa cross-reference, links (citing: $p, cited: $q);
+      let $y in reference_active($x, $t); } or
+    { $x isa cross-reference, links (citing: $p, cited: $r);
+      let $y in reference_active($x, $t);
+      let $q in referenced_at($r, $t); };
+  return { $q };
+
+  fun citing_at($p: provision, $t: date) -> { provision }:
+  match
+    { $x isa cross-reference, links (citing: $q, cited: $p);
+      let $y in reference_active($x, $t); } or
+    { $x isa cross-reference, links (citing: $r, cited: $p);
+      let $y in reference_active($x, $t);
+      let $q in citing_at($r, $t); };
+  return { $q };
+
+  # 規定の下位の規定（項・号など）
+  fun parts_transitively($p: provision) -> { provision }:
+  match
+    { containment (container: $p, part: $q); } or
+    { containment (container: $p, part: $r); let $q in parts_transitively($r); };
+  return { $q };
+
+  # 規定を含む上位の区分（条・編章節など）。「この節の規定は…準用する」のような区分への参照の影響分析に使う
+  fun containers_transitively($p: provision) -> { provision }:
+  match
+    { containment (container: $q, part: $p); $q isa provision; } or
+    { containment (container: $r, part: $p); $r isa provision; let $q in containers_transitively($r); };
+  return { $q };

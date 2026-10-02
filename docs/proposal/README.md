@@ -11,6 +11,8 @@
 | 3 | [03-modeling-approaches.md](03-modeling-approaches.md) | 方式の比較: TypeDB で表現・推論する 5 つの方式と推奨構成 |
 | 4 | [04-schema-design.md](04-schema-design.md) | 推奨構成の設計案: TypeQL スキーマと関数の具体例（民法の売買代金請求と錯誤取消） |
 | 5 | [05-roadmap.md](05-roadmap.md) | 段階的な進め方・検証方法・リスク |
+| 6 | [06-decisions.md](06-decisions.md) | 決定事項（用途・分野・実行環境・レビュー体制）と設計への反映、実機検証の結果 |
+| 7 | [07-phase1-results.md](07-phase1-results.md) | フェーズ1の結果: 民法の版つき取り込み、参照の抽出、TypeDB 3.13 で分かったこと |
 
 ## 要旨
 

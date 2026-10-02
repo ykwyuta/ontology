@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Law Era="Reiwa" Lang="ja" LawType="Act" Num="999" Year="01">
+  <LawNum>令和元年法律第九百九十九号</LawNum>
+  <LawBody>
+    <LawTitle>試験法</LawTitle>
+    <MainProvision>
+      <Chapter Num="1">
+        <ChapterTitle>第一章　総則</ChapterTitle>
+        <Article Num="1">
+          <ArticleCaption>（錯誤）</ArticleCaption>
+          <ArticleTitle>第一条</ArticleTitle>
+          <Paragraph Num="1"><ParagraphNum/>
+            <ParagraphSentence>
+              <Sentence Function="main" Num="1">意思表示は、法律行為の要素に錯誤があったときは、無効とする。</Sentence>
+              <Sentence Function="proviso" Num="2">ただし、表意者に重大な過失があったときは、表意者は、自らその無効を主張することができない。</Sentence>
+            </ParagraphSentence>
+          </Paragraph>
+        </Article>
+        <Article Num="2">
+          <ArticleTitle>第二条</ArticleTitle>
+          <Paragraph Num="1"><ParagraphNum/>
+            <ParagraphSentence><Sentence Num="1">次に掲げる場合には、前条の規定は、適用しない。</Sentence></ParagraphSentence>
+            <Item Num="1"><ItemTitle>一</ItemTitle><ItemSentence><Sentence Num="1">第一号の場合</Sentence></ItemSentence></Item>
+            <Item Num="2"><ItemTitle>二</ItemTitle><ItemSentence><Sentence Num="1">前号に掲げる場合のほか、民事執行法第百六十七条に規定する場合</Sentence></ItemSentence></Item>
+          </Paragraph>
+          <Paragraph Num="2"><ParagraphNum>２</ParagraphNum>
+            <ParagraphSentence><Sentence Num="1">前項の規定にかかわらず、第一条の規定は、同項第一号の場合にも適用する。</Sentence></ParagraphSentence>
+          </Paragraph>
+        </Article>
+        <Article Num="2_2">
+          <ArticleTitle>第二条の二</ArticleTitle>
+          <Paragraph Num="1"><ParagraphNum/>
+            <ParagraphSentence><Sentence Num="1">第一条から第二条までの規定は、代理人について準用する。この場合において、第二条第二項中「前項」とあるのは「第三条」と読み替えるものとする。</Sentence></ParagraphSentence>
+          </Paragraph>
+        </Article>
+      </Chapter>
+    </MainProvision>
+    <SupplProvision AmendLawNum="令和二年法律第一号">
+      <SupplProvisionLabel>附　則</SupplProvisionLabel>
+      <Article Num="1">
+        <ArticleTitle>第一条</ArticleTitle>
+        <Paragraph Num="1"><ParagraphNum/>
+          <ParagraphSentence><Sentence Num="1">この法律は、公布の日から施行する。ただし、第二条の規定は、附則第二条の規定による。</Sentence></ParagraphSentence>
+        </Paragraph>
+      </Article>
+      <Article Num="2">
+        <ArticleTitle>第二条</ArticleTitle>
+        <Paragraph Num="1"><ParagraphNum/>
+          <ParagraphSentence><Sentence Num="1">施行日前にされた意思表示については、新法第一条、第二条第二項及び第二条の二の規定にかかわらず、なお従前の例による。</Sentence></ParagraphSentence>
+        </Paragraph>
+      </Article>
+    </SupplProvision>
+  </LawBody>
+</Law>

@@ -1,0 +1,13 @@
+services:
+  typedb:
+    image: typedb/typedb:3.13.6
+    container_name: ontology-legal-typedb
+    ports:
+      - "1729:1729"   # gRPC（Python ドライバ）
+      - "8000:8000"   # HTTP（TypeDB Studio 等）
+    volumes:
+      - typedb-data:/var/lib/typedb/data
+    restart: unless-stopped
+
+volumes:
+  typedb-data:
