@@ -21,6 +21,7 @@ python -m venv .venv
 .venv/Scripts/legal-onto init-db
 .venv/Scripts/legal-onto import-law 129AC0000000089     # 民法（2016-10-13 以降の全版）
 .venv/Scripts/legal-onto load-norms                      # norms/*.yaml を検証・コンパイル
+.venv/Scripts/shogi-referee init-db                      # 将棋の審判（docs/proposal/shogi/）
 .venv/Scripts/python -m pytest
 ```
 

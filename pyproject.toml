@@ -1,15 +1,17 @@
 [project]
 name = "legal-onto"
 version = "0.1.0"
-description = "TypeDB による日本法の知識表現と法的判断クエリ"
+description = "TypeDB による日本法の知識表現と法的判断クエリ、将棋のルール審判"
 requires-python = ">=3.12"
 dependencies = ["typedb-driver==3.13.6", "pyyaml>=6"]
 
 [project.optional-dependencies]
-dev = ["pytest>=8"]
+# python-shogi (GPL-3.0) は将棋の審判のテストと正解データの作成にだけ使う（実行時には使わない）
+dev = ["pytest>=8", "python-shogi>=1.1"]
 
 [project.scripts]
 legal-onto = "legal_onto.cli:main"
+shogi-referee = "shogi_referee.cli:main"
 
 [build-system]
 requires = ["setuptools>=68"]

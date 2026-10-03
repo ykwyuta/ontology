@@ -1,0 +1,352 @@
+# 将棋の審判（docs/proposal/shogi/）のスキーマと判定関数（TypeDB 3.x）
+# 座標: 筋 file 1〜9（先手から見て右が 1）、段 rank 1〜9（先手から見て上が 1）。square-id は "55"（5五）。
+# 駒の動き（step）は先手の向きで持ち、後手は player の sign = -1 を掛ける。
+define
+  # ===== 盤 =====
+  attribute square-id, value string;
+  attribute file, value integer;
+  attribute rank, value integer;
+  attribute df, value integer;
+  attribute dr, value integer;
+
+  entity square, owns square-id @key, owns file, owns rank,
+    plays geometry:origin, plays geometry:target, plays occupancy:square,
+    plays promotion-zone:square, plays dead-end:square;
+  # origin から (df, dr) だけずれたマスが target（8 方向と桂の 4 方向）
+  relation geometry, relates origin, relates target, owns df, owns dr;
+
+  # ===== ルール層 =====
+  attribute piece-code, value string;          # "P" 歩 … "K" 玉、"+P" と … "+R" 竜（USI の表記）
+  attribute piece-name, value string;
+  attribute slides, value boolean;
+  attribute side, value string @values("sente", "gote");
+  attribute sign, value integer;
+  attribute rule-id, value string;
+  attribute rule-label, value string;
+  attribute rule-text, value string;
+  attribute source-ref, value string;
+
+  entity piece-type, owns piece-code @key, owns piece-name,
+    plays movement:piece, plays promotion:base, plays promotion:promoted,
+    plays occupancy:piece, plays in-hand:piece, plays dead-end:piece;
+  entity step, owns df, owns dr, owns slides, plays movement:step;
+  relation movement, relates piece, relates step;
+  relation promotion, relates base, relates promoted;
+
+  entity player, owns side @key, owns sign,
+    plays occupancy:owner, plays in-hand:owner, plays turn:player,
+    plays promotion-zone:player, plays dead-end:player;
+  # 敵陣（成れる段）
+  relation promotion-zone, relates player, relates square;
+  # 行き所のない駒: player の piece は square にいられない（歩・香は最奥の段、桂は奥 2 段）
+  relation dead-end, relates player, relates piece, relates square;
+
+  entity rule, owns rule-id @key, owns rule-label, owns rule-text, owns source-ref @card(0..);
+
+  # ===== 局面層 =====
+  attribute position-id, value string;
+  attribute sfen, value string;
+  attribute amount, value integer;
+
+  entity position, owns position-id @key, owns sfen,
+    plays occupancy:position, plays in-hand:position, plays turn:position;
+  relation turn, relates position, relates player;
+  relation occupancy, relates position, relates square, relates piece, relates owner;
+  relation in-hand, relates position, relates piece, relates owner, owns amount;
+
+  # ===== 利き =====
+
+  fun next_square($s: square, $df: integer, $dr: integer) -> { square }:
+  match
+    $g isa geometry, links (origin: $s, target: $t), has df $gdf, has dr $gdr;
+    $gdf == $df; $gdr == $dr;
+  return { $t };
+
+  fun ray($p: position, $s: square, $df: integer, $dr: integer) -> { square }:
+  match
+    { let $t in next_square($s, $df, $dr); } or
+    { let $m in next_square($s, $df, $dr); let $t in ray_beyond($p, $m, $df, $dr); };
+  return { $t };
+
+  fun ray_beyond($p: position, $m: square, $df: integer, $dr: integer) -> { square }:
+  match
+    not { occupancy (position: $p, square: $m); };
+    let $t in ray($p, $m, $df, $dr);
+  return { $t };
+
+  fun targets($p: position, $s: square, $df: integer, $dr: integer, $sl: boolean) -> { square }:
+  match
+    { $sl == false; let $t in next_square($s, $df, $dr); } or
+    { $sl == true;  let $t in ray($p, $s, $df, $dr); };
+  return { $t };
+
+  # $pl の駒 $pt が $s から利いているマス（自分の駒がいるマスを含む）
+  fun reach($p: position, $pl: player, $pt: piece-type, $s: square) -> { square }:
+  match
+    $pl has sign $sg;
+    movement (piece: $pt, step: $st);
+    $st has df $df0, has dr $dr0, has slides $sl0;
+    let $df = $df0 * $sg;
+    let $dr = $dr0 * $sg;
+    let $sl = $sl0;
+    let $t in targets($p, $s, $df, $dr, $sl);
+  return { $t };
+
+  fun attacks($p: position, $pl: player) -> { square }:
+  match
+    occupancy (position: $p, square: $s, piece: $pt, owner: $pl);
+    let $t in reach($p, $pl, $pt, $s);
+  return { $t };
+
+  fun opponent($pl: player) -> { player }:
+  match
+    $op isa player; not { $op is $pl; };
+  return { $op };
+
+  fun king_square($p: position, $pl: player) -> { square }:
+  match
+    $k isa piece-type, has piece-code "K";
+    occupancy (position: $p, square: $s, piece: $k, owner: $pl);
+  return { $s };
+
+  fun in_check($p: position, $pl: player) -> { position }:
+  match
+    let $op in opponent($pl);
+    let $ks in king_square($p, $pl);
+    let $a in attacks($p, $op); $a is $ks;    # 束縛済みの変数に let … in で受け直すと REP21 になるため is で比べる
+  return { $p };
+
+  # ===== 指した後の仮想の盤（局面を書き込まずに王手放置を判定する） =====
+  # 指し手は移動元 $f と移動先 $t で表す。駒を打つ手は $f = $t とする。
+
+  # 指した後に $q に駒があるか（$q を返す）
+  fun occupied_after($p: position, $q: square, $f: square, $t: square) -> { square }:
+  match
+    { $q is $t; } or
+    { let $x in occupied_except($p, $q, $f); };
+  return { $q };
+
+  fun occupied_except($p: position, $q: square, $f: square) -> { square }:
+  match
+    occupancy (position: $p, square: $q);
+    not { $q is $f; };
+  return { $q };
+
+  # 指した後の盤で、$s から ($df, $dr) の方向に進んで最初にぶつかる駒のマス
+  fun first_blocker_after($p: position, $s: square, $df: integer, $dr: integer, $f: square, $t: square)
+      -> { square }:
+  match
+    { let $b in next_square($s, $df, $dr); let $x in occupied_after($p, $b, $f, $t); } or
+    { let $m in next_square($s, $df, $dr); let $b in blocker_beyond_after($p, $m, $df, $dr, $f, $t); };
+  return { $b };
+
+  fun blocker_beyond_after($p: position, $m: square, $df: integer, $dr: integer, $f: square, $t: square)
+      -> { square }:
+  match
+    not { let $x in occupied_after($p, $m, $f, $t); };
+    let $b in first_blocker_after($p, $m, $df, $dr, $f, $t);
+  return { $b };
+
+  # 指した後の盤で、$op の駒が $k に利いているか。$k から逆向きにたどって、その向きに利く駒を探す
+  # （移動先 $t の駒は指した側の駒なので、$op の駒としては数えない）
+  fun attacked_after($p: position, $k: square, $op: player, $f: square, $t: square) -> { position }:
+  match
+    $op has sign $sg;
+    occupancy (position: $p, square: $a, piece: $pt, owner: $op);
+    not { $a is $t; };
+    movement (piece: $pt, step: $st);
+    $st has df $df0, has dr $dr0, has slides $sl0;
+    let $df = 0 - $df0 * $sg;
+    let $dr = 0 - $dr0 * $sg;
+    let $sl = $sl0;
+    let $b in attacker_at($p, $k, $df, $dr, $sl, $f, $t); $b is $a;
+  return { $p };
+
+  fun attacker_at($p: position, $k: square, $df: integer, $dr: integer, $sl: boolean, $f: square, $t: square)
+      -> { square }:
+  match
+    { $sl == false; let $a in next_square($k, $df, $dr); } or
+    { $sl == true;  let $a in first_blocker_after($p, $k, $df, $dr, $f, $t); };
+  return { $a };
+
+  # 指した後の、指した側の玉のマス
+  fun king_after($p: position, $pl: player, $pt: piece-type, $t: square) -> { square }:
+  match
+    { $pt has piece-code "K"; $k is $t; } or
+    { $pt has piece-code $c; $c != "K"; let $k in king_square($p, $pl); };
+  return { $k };
+
+  # 指し手 ($f → $t、駒 $pt) を指すと、指した側の玉に王手がかかったままになるか
+  fun leaves_check($p: position, $f: square, $t: square, $pt: piece-type) -> { position }:
+  match
+    turn (position: $p, player: $pl);
+    let $op in opponent($pl);
+    let $k in king_after($p, $pl, $pt, $t);
+    let $x in attacked_after($p, $k, $op, $f, $t);
+  return { $p };
+
+  # ===== 指し手の生成 =====
+
+  # 盤上の駒の移動（疑似合法手）
+  fun board_moves($p: position) -> { square, square, piece-type }:
+  match
+    turn (position: $p, player: $pl);
+    occupancy (position: $p, square: $s, piece: $pt, owner: $pl);
+    let $t in reach($p, $pl, $pt, $s);
+    not { occupancy (position: $p, square: $t, owner: $pl); };
+  return { $s, $t, $pt };
+
+  # 成れる: 成れる駒で、移動元か移動先が敵陣
+  fun may_promote($p: position, $pt: piece-type, $s: square, $t: square) -> { position }:
+  match
+    turn (position: $p, player: $pl);
+    promotion (base: $pt);
+    { promotion-zone (player: $pl, square: $s); } or { promotion-zone (player: $pl, square: $t); };
+  return { $p };
+
+  # 成らなければならない: 成らないと行き所がない
+  fun must_promote($p: position, $pt: piece-type, $t: square) -> { position }:
+  match
+    turn (position: $p, player: $pl);
+    dead-end (player: $pl, piece: $pt, square: $t);
+  return { $p };
+
+  # 合法手（盤上の移動・成らない）
+  fun legal_moves_unpromoted($p: position) -> { square, square, piece-type }:
+  match
+    let $s, $t, $pt in board_moves($p);
+    not { let $x in must_promote($p, $pt, $t); };
+    not { let $y in leaves_check($p, $s, $t, $pt); };
+  return { $s, $t, $pt };
+
+  # 合法手（盤上の移動・成る）。王手放置かどうかは玉の位置と駒の配置で決まり、成るかどうかによらない
+  fun legal_moves_promoted($p: position) -> { square, square, piece-type }:
+  match
+    let $s, $t, $pt in board_moves($p);
+    let $x in may_promote($p, $pt, $s, $t);
+    not { let $y in leaves_check($p, $s, $t, $pt); };
+  return { $s, $t, $pt };
+
+  # 二歩: $pl の成っていない歩が、$t と同じ筋にあるか
+  fun pawn_on_file_of($p: position, $pl: player, $t: square) -> { position }:
+  match
+    $pawn isa piece-type, has piece-code "P";
+    occupancy (position: $p, square: $s, piece: $pawn, owner: $pl);
+    $s has file $fs; $t has file $ft; $fs == $ft;
+  return { $p };
+
+  fun nifu($p: position, $pl: player, $pt: piece-type, $t: square) -> { position }:
+  match
+    $pt has piece-code "P";
+    let $x in pawn_on_file_of($p, $pl, $t);
+  return { $p };
+
+  # 持ち駒を打つ手（打ち歩詰めを除く。打ち歩詰めはアプリケーションが後の局面で判定する）
+  fun legal_drops($p: position) -> { piece-type, square }:
+  match
+    turn (position: $p, player: $pl);
+    $h isa in-hand, links (position: $p, piece: $pt, owner: $pl), has amount $n; $n > 0;
+    $t isa square;
+    not { occupancy (position: $p, square: $t); };
+    not { dead-end (player: $pl, piece: $pt, square: $t); };
+    not { let $x in nifu($p, $pl, $pt, $t); };
+    not { let $y in leaves_check($p, $t, $t, $pt); };
+  return { $pt, $t };
+
+  # 歩を $t に打つと、相手の玉に王手がかかるか（歩の利きは前に 1 マス）
+  fun pawn_drop_checks($p: position, $t: square) -> { position }:
+  match
+    turn (position: $p, player: $pl);
+    $pl has sign $sg;
+    let $dr = 0 - $sg;
+    let $op in opponent($pl);
+    let $k in king_square($p, $op);
+    let $n in next_square($t, 0, $dr); $n is $k;
+  return { $p };
+
+  # ===== 反則の判定（理由の特定に使う。合法手の一覧にない指し手について評価する） =====
+
+  # R-NO-PIECE 移動元に駒がない
+  fun v_no_piece($p: position, $f: square) -> { position }:
+  match
+    $p isa position;
+    not { occupancy (position: $p, square: $f); };
+  return { $p };
+
+  # R-TURN 移動元の駒が手番の側の駒ではない
+  fun v_turn($p: position, $f: square) -> { position }:
+  match
+    turn (position: $p, player: $pl);
+    occupancy (position: $p, square: $f, owner: $o);
+    not { $o is $pl; };
+  return { $p };
+
+  # R-OWN 移動先に自分の駒がある
+  fun v_own($p: position, $t: square) -> { position }:
+  match
+    turn (position: $p, player: $pl);
+    occupancy (position: $p, square: $t, owner: $pl);
+  return { $p };
+
+  # R-MOVE 駒の動きで移動先に行けない
+  fun v_move($p: position, $f: square, $t: square) -> { position }:
+  match
+    turn (position: $p, player: $pl);
+    occupancy (position: $p, square: $f, piece: $pt, owner: $pl);
+    not { let $u in reach($p, $pl, $pt, $f); $u is $t; };
+  return { $p };
+
+  # R-PROMO-PIECE 成れない駒（玉・金・成駒）を成ろうとした
+  fun v_promo_piece($p: position, $f: square) -> { position }:
+  match
+    occupancy (position: $p, square: $f, piece: $pt);
+    not { promotion (base: $pt); };
+  return { $p };
+
+  # R-PROMO-ZONE 移動元も移動先も敵陣でないのに成ろうとした
+  fun v_promo_zone($p: position, $f: square, $t: square) -> { position }:
+  match
+    turn (position: $p, player: $pl);
+    not { promotion-zone (player: $pl, square: $f); };
+    not { promotion-zone (player: $pl, square: $t); };
+  return { $p };
+
+  # R-PROMO-MANDATORY 成らないと行き所のない駒を成らずに動かした
+  fun v_promo_mandatory($p: position, $f: square, $t: square) -> { position }:
+  match
+    occupancy (position: $p, square: $f, piece: $pt);
+    let $x in must_promote($p, $pt, $t);
+  return { $p };
+
+  # R-DROP-HAND 持っていない駒を打った
+  fun v_drop_hand($p: position, $pt: piece-type) -> { position }:
+  match
+    turn (position: $p, player: $pl);
+    not { $h isa in-hand, links (position: $p, piece: $pt, owner: $pl), has amount $n; $n > 0; };
+  return { $p };
+
+  # R-DROP-EMPTY 駒のあるマスに打った
+  fun v_drop_empty($p: position, $t: square) -> { position }:
+  match
+    occupancy (position: $p, square: $t);
+  return { $p };
+
+  # R-DEADEND-DROP 行き所のない駒を打った
+  fun v_deadend_drop($p: position, $pt: piece-type, $t: square) -> { position }:
+  match
+    turn (position: $p, player: $pl);
+    dead-end (player: $pl, piece: $pt, square: $t);
+  return { $p };
+
+  # R-NIFU 二歩
+  fun v_nifu($p: position, $pt: piece-type, $t: square) -> { position }:
+  match
+    turn (position: $p, player: $pl);
+    let $x in nifu($p, $pl, $pt, $t);
+  return { $p };
+
+  # R-SELF-CHECK 指した後に自玉に王手がかかる
+  fun v_self_check($p: position, $f: square, $t: square, $pt: piece-type) -> { position }:
+  match
+    let $x in leaves_check($p, $f, $t, $pt);
+  return { $p };
