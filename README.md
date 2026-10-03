@@ -2,6 +2,7 @@
 
 TypeDB で日本法（まず民法の意思表示・売買・消滅時効）を表現し、法的判断をクエリで引き出すための実務家向け支援ツール。
 
+- 教科書（エンジニアのためのオントロジー入門）: [docs/userguide/README.md](docs/userguide/README.md)
 - 提案と設計: [docs/proposal/README.md](docs/proposal/README.md)
 - 決定事項: [docs/proposal/06-decisions.md](docs/proposal/06-decisions.md)
 - フェーズ1（条文層）の結果: [docs/proposal/07-phase1-results.md](docs/proposal/07-phase1-results.md)
