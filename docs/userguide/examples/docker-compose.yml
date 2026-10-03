@@ -1,0 +1,30 @@
+# 第12章（Cypher）と第14章（Datalog）の例題を動かす環境
+#   docker compose up -d neo4j
+#   docker compose exec neo4j cypher-shell -f /examples/company.cypher
+#   docker compose run --rm souffle
+# 詳しくは README.md
+services:
+  neo4j:
+    image: neo4j:5.26.31-community
+    container_name: userguide-neo4j
+    environment:
+      NEO4J_AUTH: none                 # ローカルの学習用。認証なし
+    ports:
+      - "7474:7474"                    # Neo4j Browser（http://localhost:7474）
+      - "7687:7687"                    # Bolt
+    volumes:
+      - ./neo4j:/examples:ro
+    healthcheck:
+      test: ["CMD-SHELL", "cypher-shell 'RETURN 1' || exit 1"]
+      interval: 5s
+      timeout: 10s
+      retries: 30
+
+  souffle:
+    build: ./souffle
+    image: userguide-souffle:2.5
+    volumes:
+      - ./souffle:/work:ro
+    working_dir: /work
+    # -D- で .output の結果を標準出力に表示する
+    command: ["souffle", "-D-", "company.dl"]

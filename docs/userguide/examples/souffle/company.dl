@@ -1,0 +1,57 @@
+// 第14章の例題（社員・部署・プロジェクト）を Soufflé の Datalog で書いたもの
+// 実行: docker compose run --rm souffle
+// Soufflé では、関係（述語）を .decl で宣言し、否定は「!」で書く
+
+// --- 宣言 ---
+.decl regular_employee(e: symbol)
+.decl contract_employee(e: symbol)
+.decl department(d: symbol)
+.decl sub_of(child: symbol, parent: symbol)
+.decl member_of(e: symbol, d: symbol)
+.decl assignment(e: symbol, project: symbol, role: symbol, since: symbol)   // 4 項の関係
+
+.decl employee(e: symbol)
+.decl within(d: symbol, ancestor: symbol)
+.decl in_sales_hq(e: symbol)
+.decl can_approve(leader: symbol, member: symbol)
+.decl assigned(e: symbol)
+.decl unassigned(e: symbol)
+
+// --- 事実 ---
+regular_employee("山田").  contract_employee("佐藤").
+regular_employee("鈴木").  regular_employee("田中").
+
+department("営業本部").  department("第一営業部").
+department("第二営業部"). department("開発部").
+sub_of("第一営業部", "営業本部").
+sub_of("第二営業部", "営業本部").
+
+member_of("山田", "第一営業部").  member_of("佐藤", "第一営業部").
+member_of("鈴木", "第二営業部").  member_of("田中", "開発部").
+
+assignment("山田", "X", "leader", "2026-04-01").
+assignment("佐藤", "X", "member", "2026-04-15").
+assignment("鈴木", "Y", "leader", "2026-05-01").
+
+// --- ルール ---
+// 継承: 正社員も契約社員も社員
+employee(E) :- regular_employee(E).
+employee(E) :- contract_employee(E).
+
+// 推移的な関係: D は A の配下（自分自身を含む）
+within(D, D) :- department(D).
+within(D, A) :- sub_of(D, P), within(P, A).
+
+// Q1: 営業本部（配下を含む）に所属する社員  → 山田、佐藤、鈴木
+in_sales_hq(E) :- employee(E), member_of(E, D), within(D, "営業本部").
+
+// Q2: リーダーは同じプロジェクトの他のメンバーを承認できる  → 山田 → 佐藤
+can_approve(L, M) :- assignment(L, P, "leader", _), assignment(M, P, _, _), L != M.
+
+// Q3: どのプロジェクトにも割り当てられていない社員（否定）  → 田中
+assigned(E)   :- assignment(E, _, _, _).
+unassigned(E) :- employee(E), !assigned(E).
+
+.output in_sales_hq
+.output can_approve
+.output unassigned

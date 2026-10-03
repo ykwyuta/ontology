@@ -7,6 +7,7 @@ RDB のテーブル設計と Java のオブジェクト指向がわかるエン�
 - 新しい概念は、まず「テーブルでいうと何か」「Java でいうと何か」に置き換えて説明し、そのあとで違いを説明します。
 - 各章の終わりに「まとめ」と「RDB / Java との対応表」を置きます。
 - コード例は SQL・Java・TypeQL・SPARQL・Cypher・Datalog を使いますが、どれも読むだけでわかる短いものにします。
+- 第3部の Cypher（Neo4j）と Datalog（Soufflé）の例は、[examples/](examples/README.md) の docker compose で実際に動かせます。
 - 第1部だけで基礎はひととおり身につきます。第2部以降は関心に応じてどこから読んでもかまいません。
 
 ## 目次

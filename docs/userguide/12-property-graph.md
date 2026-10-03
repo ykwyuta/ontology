@@ -82,6 +82,24 @@ WHERE NOT EXISTS { (e)-[:ASSIGNED]->(:Project) }
 RETURN e.name
 ```
 
+### 動かしてみる
+
+この節のデータと問い合わせは [examples/neo4j/company.cypher](examples/neo4j/company.cypher) にあり、[examples/docker-compose.yml](examples/docker-compose.yml) で Neo4j 5（Community 版）を起動して実行できます（[examples/README.md](examples/README.md)）。
+
+```bash
+cd docs/userguide/examples
+docker compose up -d neo4j
+docker compose exec neo4j cypher-shell -f /examples/company.cypher
+```
+
+```
+"Q1", "佐藤" / "Q1", "山田" / "Q1", "鈴木"
+"Q2", "山田", "佐藤"
+"Q3", "田中"
+```
+
+ブラウザで http://localhost:7474 を開くと、Neo4j Browser でグラフを図として見られます（`MATCH (n) RETURN n`）。
+
 ## 12.4 スキーマと推論の弱さを補う
 
 プロパティグラフは「スキーマがなくても始められる」手軽さが魅力ですが、オントロジーとして使うには、意味と制約をどこかで補う必要があります。

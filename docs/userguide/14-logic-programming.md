@@ -15,51 +15,101 @@
 
 ## 14.2 例題を Datalog で書く
 
-Datalog は、Prolog から関数記号などを除いて、必ず計算が終わるようにした言語です。データベースの問い合わせ言語として研究されてきました。ここでは一般的な書き方で示します（Soufflé などの処理系では、宣言の書き方が少し違います）。
+Datalog は、Prolog から関数記号などを除いて、必ず計算が終わるようにした言語です。データベースの問い合わせ言語として研究されてきました。ここでは、高速な Datalog の処理系 **Soufflé** の書き方で示します。Soufflé では、関係（述語）を `.decl` で宣言し、否定を `!` で書き、結果を出力する関係を `.output` で指定します。
 
 ```prolog
-% --- 事実 ---
-regular_employee("山田").   contract_employee("佐藤").
-regular_employee("鈴木").   regular_employee("田中").
+// --- 宣言 ---
+.decl regular_employee(e: symbol)
+.decl contract_employee(e: symbol)
+.decl department(d: symbol)
+.decl sub_of(child: symbol, parent: symbol)
+.decl member_of(e: symbol, d: symbol)
+.decl assignment(e: symbol, project: symbol, role: symbol, since: symbol)   // 4 項の関係
 
+.decl employee(e: symbol)
+.decl within(d: symbol, ancestor: symbol)
+.decl in_sales_hq(e: symbol)
+.decl can_approve(leader: symbol, member: symbol)
+.decl assigned(e: symbol)
+.decl unassigned(e: symbol)
+
+// --- 事実 ---
+regular_employee("山田").  contract_employee("佐藤").
+regular_employee("鈴木").  regular_employee("田中").
+
+department("営業本部").  department("第一営業部").
+department("第二営業部"). department("開発部").
 sub_of("第一営業部", "営業本部").
 sub_of("第二営業部", "営業本部").
-department("営業本部"). department("第一営業部").
-department("第二営業部"). department("開発部").
 
 member_of("山田", "第一営業部").  member_of("佐藤", "第一営業部").
 member_of("鈴木", "第二営業部").  member_of("田中", "開発部").
 
-% 割り当て(社員, プロジェクト, 役割, 開始日)  ← 4 項の関係をそのまま書ける
 assignment("山田", "X", "leader", "2026-04-01").
 assignment("佐藤", "X", "member", "2026-04-15").
 assignment("鈴木", "Y", "leader", "2026-05-01").
 
-% --- ルール ---
-% 継承: 正社員も契約社員も社員
+// --- ルール ---
+// 継承: 正社員も契約社員も社員
 employee(E) :- regular_employee(E).
 employee(E) :- contract_employee(E).
 
-% 推移的な関係: D は A の配下（自分自身を含む）
+// 推移的な関係: D は A の配下（自分自身を含む）
 within(D, D) :- department(D).
 within(D, A) :- sub_of(D, P), within(P, A).
 
-% Q1
+// Q1: 営業本部（配下を含む）に所属する社員  → 山田、佐藤、鈴木
 in_sales_hq(E) :- employee(E), member_of(E, D), within(D, "営業本部").
 
-% Q2: リーダーは同じプロジェクトの他のメンバーを承認できる
+// Q2: リーダーは同じプロジェクトの他のメンバーを承認できる  → 山田 → 佐藤
 can_approve(L, M) :- assignment(L, P, "leader", _), assignment(M, P, _, _), L != M.
 
-% Q3: 否定
+// Q3: どのプロジェクトにも割り当てられていない社員（否定）  → 田中
 assigned(E)   :- assignment(E, _, _, _).
-unassigned(E) :- employee(E), not assigned(E).
+unassigned(E) :- employee(E), !assigned(E).
+
+.output in_sales_hq
+.output can_approve
+.output unassigned
 ```
 
 継承もルール、推移的な関係もルール、問いの答えもルールです。**すべてが同じ形で書ける**のが論理プログラミングの強みです。述語には何個でも引数を持たせられるので、4 項の「割り当て」もそのまま書けます。
 
+### 動かしてみる
+
+このプログラムは [examples/souffle/company.dl](examples/souffle/company.dl) にあり、[examples/docker-compose.yml](examples/docker-compose.yml) で Soufflé 2.5 を動かせます（[examples/README.md](examples/README.md)）。
+
+```bash
+cd docs/userguide/examples
+docker compose run --rm souffle
+```
+
+```
+---------------
+can_approve
+leader	member
+===============
+山田	佐藤
+===============
+---------------
+in_sales_hq
+e
+===============
+山田
+佐藤
+鈴木
+===============
+---------------
+unassigned
+e
+===============
+田中
+===============
+```
+
 ## 14.3 否定と層化
 
-`unassigned(E) :- employee(E), not assigned(E).` の `not` は、「`assigned(E)` を導けなければ」という意味です（失敗による否定、閉世界。第5章）。
+`unassigned(E) :- employee(E), !assigned(E).` の `!` は、「`assigned(E)` を導けなければ」という意味です（失敗による否定、閉世界。第5章）。
 
 Datalog の処理系は、`assigned` を先に全部計算してから `unassigned` を計算します。これが**層化**です。もし `assigned` の定義の中で `unassigned` を否定で使うと循環になるので、処理系はエラーにします。
 
