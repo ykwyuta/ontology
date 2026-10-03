@@ -1,0 +1,121 @@
+# 将棋のルール判定の試作スキーマ（TypeDB 3.x）
+# 提案書 docs/proposal/shogi/ の 3 章の設計を、実機で確かめるための最小構成。
+# 検証: python scripts/verify_shogi_prototype.py
+#
+# 座標: 筋 file 1〜9（先手から見て右が 1）、段 rank 1〜9（先手から見て上が 1）。
+# 盤は 81 個のマス（square）と、マスどうしの位置関係（geometry: origin から (df, dr) だけずれたマスが target）で表す。
+# 駒の動き（step）は先手の向きで持つ（前 = rank が減る方向、dr = -1）。後手は player の sign = -1 を掛ける。
+define
+  # --- 盤 ---
+  attribute square-id, value string;           # "55" = 5五
+  attribute file, value integer;
+  attribute rank, value integer;
+  attribute df, value integer;
+  attribute dr, value integer;
+
+  entity square, owns square-id @key, owns file, owns rank,
+    plays geometry:origin, plays geometry:target, plays occupancy:square;
+  relation geometry, relates origin, relates target, owns df, owns dr;
+
+  # --- ルール層: 駒の種類と動き ---
+  attribute piece-code, value string;          # "P" 歩, "L" 香, …, "+P" と, "+R" 竜
+  attribute piece-name, value string;
+  attribute slides, value boolean;             # 何マスでも進める（香・角・飛の利き）
+  attribute last-ranks-forbidden, value integer;  # 行き所のない駒: 敵陣の奥から何段に置けないか（歩・香 1、桂 2）
+
+  entity piece-type,
+    owns piece-code @key, owns piece-name, owns last-ranks-forbidden,
+    plays movement:piece, plays promotion:base, plays promotion:promoted,
+    plays occupancy:piece, plays in-hand:piece;
+  entity step, owns df, owns dr, owns slides, plays movement:step;
+  relation movement, relates piece, relates step;
+  relation promotion, relates base, relates promoted;
+
+  # --- 局面層 ---
+  attribute side, value string @values("sente", "gote");
+  attribute sign, value integer;               # 先手 1、後手 -1
+  attribute position-id, value string;
+  attribute amount, value integer;
+
+  entity player, owns side @key, owns sign,
+    plays occupancy:owner, plays in-hand:owner, plays turn:player;
+  entity position, owns position-id @key,
+    plays occupancy:position, plays in-hand:position, plays turn:position;
+  relation turn, relates position, relates player;                 # 手番
+  relation occupancy, relates position, relates square, relates piece, relates owner;
+  relation in-hand, relates position, relates piece, relates owner, owns amount;   # 持ち駒
+
+  # --- 盤上の判定に使う関数 ---
+
+  # $s から ($df, $dr) だけずれたマス（盤の外なら返さない）
+  fun next_square($s: square, $df: integer, $dr: integer) -> { square }:
+  match
+    $g isa geometry, links (origin: $s, target: $t), has df $gdf, has dr $gdr;
+    $gdf == $df; $gdr == $dr;
+  return { $t };
+
+  # $s から ($df, $dr) の方向に進んで届くマス（最初にぶつかった駒のマスを含む）
+  fun ray($p: position, $s: square, $df: integer, $dr: integer) -> { square }:
+  match
+    { let $t in next_square($s, $df, $dr); } or
+    { let $m in next_square($s, $df, $dr); let $t in ray_beyond($p, $m, $df, $dr); };
+  return { $t };
+
+  # 空きマスなら、その先へ進む（否定を or の分岐の外に出すため関数を分ける）
+  fun ray_beyond($p: position, $m: square, $df: integer, $dr: integer) -> { square }:
+  match
+    not { occupancy (position: $p, square: $m); };
+    let $t in ray($p, $m, $df, $dr);
+  return { $t };
+
+  # 1 マスだけ動く駒と、何マスでも進む駒の行き先
+  fun targets($p: position, $s: square, $df: integer, $dr: integer, $sl: boolean) -> { square }:
+  match
+    { $sl == false; let $t in next_square($s, $df, $dr); } or
+    { $sl == true;  let $t in ray($p, $s, $df, $dr); };
+  return { $t };
+
+  # $pl の駒 $pt が $s から利いているマス（自分の駒がいるマスも含む。利きの判定用）
+  fun reach($p: position, $pl: player, $pt: piece-type, $s: square) -> { square }:
+  match
+    $pl has sign $sg;
+    movement (piece: $pt, step: $st);
+    $st has df $df0, has dr $dr0, has slides $sl0;
+    let $df = $df0 * $sg;
+    let $dr = $dr0 * $sg;
+    let $sl = $sl0;
+    let $t in targets($p, $s, $df, $dr, $sl);
+  return { $t };
+
+  # $pl の駒の利きがあるマス
+  fun attacks($p: position, $pl: player) -> { square }:
+  match
+    occupancy (position: $p, square: $s, piece: $pt, owner: $pl);
+    let $t in reach($p, $pl, $pt, $s);
+  return { $t };
+
+  # 手番の側の、盤上の駒の移動（成り・王手放置は考えない「疑似合法手」）: 移動元・移動先・駒
+  fun board_moves($p: position) -> { square, square, piece-type }:
+  match
+    turn (position: $p, player: $pl);
+    occupancy (position: $p, square: $s, piece: $pt, owner: $pl);
+    let $t in reach($p, $pl, $pt, $s);
+    not { occupancy (position: $p, square: $t, owner: $pl); };
+  return { $s, $t, $pt };
+
+  # $pl の玉に王手がかかっているか
+  fun in_check($p: position, $pl: player) -> { position }:
+  match
+    $k isa piece-type, has piece-code "K";
+    occupancy (position: $p, square: $ks, piece: $k, owner: $pl);
+    $op isa player; not { $op is $pl; };
+    let $ks in attacks($p, $op);
+  return { $p };
+
+  # 二歩: $pl の成っていない歩が筋 $f にあるか
+  fun pawn_on_file($p: position, $pl: player, $f: integer) -> { position }:
+  match
+    $pawn isa piece-type, has piece-code "P";
+    occupancy (position: $p, square: $s, piece: $pawn, owner: $pl);
+    $s has file $sf; $sf == $f;
+  return { $p };

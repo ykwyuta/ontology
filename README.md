@@ -4,6 +4,7 @@ TypeDB で日本法（まず民法の意思表示・売買・消滅時効）を�
 
 - 教科書（エンジニアのためのオントロジー入門）: [docs/userguide/README.md](docs/userguide/README.md)
 - 提案と設計: [docs/proposal/README.md](docs/proposal/README.md)
+- 提案（将棋のルールと AI の指し手の反則判定）: [docs/proposal/shogi/README.md](docs/proposal/shogi/README.md)
 - 決定事項: [docs/proposal/06-decisions.md](docs/proposal/06-decisions.md)
 - フェーズ1（条文層）の結果: [docs/proposal/07-phase1-results.md](docs/proposal/07-phase1-results.md)
 - フェーズ2（規範層とコンパイラ）の結果: [docs/proposal/08-phase2-results.md](docs/proposal/08-phase2-results.md)
