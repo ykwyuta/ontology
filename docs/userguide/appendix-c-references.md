@@ -65,6 +65,14 @@
 | Anthropic, Claude Code の公式ドキュメント | コーディングエージェント | 20, 27 |
 | OpenAI, Codex の公式ドキュメント | コーディングエージェント | 20 |
 
+## 将棋
+
+| 資料 | 内容 | 章 |
+|------|------|----|
+| 公益社団法人 日本将棋連盟 — https://www.shogi.or.jp/ | 将棋のルールと対局規定 | 28〜30 |
+| python-shogi — https://github.com/gunyarakun/python-shogi | 基準にした将棋ライブラリ（GPL-3.0。テスト専用） | 30 |
+| [docs/proposal/shogi/](../proposal/shogi/README.md) | 将棋の審判の提案・決定・実装結果 | 28〜30 |
+
 ## 書籍
 
 | 資料 | 内容 | 章 |
