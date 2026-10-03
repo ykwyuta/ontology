@@ -41,7 +41,7 @@ AI には USI 形式で指し手を出力させます。
       "source": "日本将棋連盟 対局規定（反則）"
     }
   ],
-  "legal_move_examples": ["7g7f", "2g2f", "P*4e"],
+  "legal_move_examples": ["7g7f", "2g2f", "6i7h"],
   "position": "lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL b - 1"
 }
 ```
@@ -83,6 +83,8 @@ sequenceDiagram
 | `apply_move` | 局面、指し手 | 指した後の局面（合法な場合） |
 
 ## 4.5 使い道
+
+> 用途は「AI 対局の審判」と「LLM のルール理解の評価」に決まりました。学習支援は対象外です（[06](06-decisions.md)）。
 
 | 使い道 | 内容 |
 |-------|------|

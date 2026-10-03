@@ -11,6 +11,7 @@
 | 3 | [03-design.md](03-design.md) | 推奨構成の設計: スキーマ、判定関数、指し手の判定の流れ。試作で確かめた点 |
 | 4 | [04-ai-integration.md](04-ai-integration.md) | AI との組み合わせ: 指し手の受け取り、反則の説明、提案と判定のループ |
 | 5 | [05-roadmap.md](05-roadmap.md) | 進め方・検証・リスク |
+| 6 | [06-decisions.md](06-decisions.md) | 決定事項（用途: AI 対局の審判と LLM のルール理解の評価）と設計への反映 |
 | — | [prototype/schema.tql](prototype/schema.tql) | 試作スキーマ（実機で検証済み。`python scripts/verify_shogi_prototype.py`） |
 
 ## 要旨
